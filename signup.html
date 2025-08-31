@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sign Up - Secret Santa</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f8f8; }
+    .container { max-width: 400px; margin: 60px auto; background: #fff; padding: 32px; border-radius: 10px; box-shadow: 0 2px 12px rgba(44,62,80,0.10); border: 2px solid #c62828; }
+    h2 { color: #388e3c; text-align: center; }
+    label { display: block; margin-top: 18px; font-weight: bold; color: #388e3c; }
+    input { width: 100%; padding: 12px; margin-top: 8px; border-radius: 6px; border: 1.5px solid #c62828; font-size: 1em; background: #fff; color: #222; box-sizing: border-box; }
+    button { margin-top: 28px; background: linear-gradient(90deg, #c62828 60%, #388e3c 100%); color: #fffbe7; border: none; padding: 14px 28px; border-radius: 6px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(44, 62, 80, 0.10); transition: background 0.2s; }
+    button:hover { background: linear-gradient(90deg, #b71c1c 60%, #2e7d32 100%); }
+    .error { color: #c62828; margin: 10px 0; font-weight: bold; }
+    .success { color: #388e3c; margin: 10px 0; font-weight: bold; }
+  </style>
+  <script type="module">
+    import { handleSignUp } from './auth.js';
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('signupForm');
+      const messageDiv = document.getElementById('message');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        messageDiv.textContent = '';
+        const firstName = document.getElementById('firstName').value.trim();
+        const lastName = document.getElementById('lastName').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        if (!firstName || !lastName || !email || !password) {
+          messageDiv.textContent = 'All fields are required.';
+          messageDiv.className = 'error';
+          return;
+        }
+        const fullName = `${firstName} ${lastName}`;
+        const { error } = await handleSignUp(email, password, fullName);
+        if (error) {
+          messageDiv.textContent = error.message;
+          messageDiv.className = 'error';
+        } else {
+          messageDiv.textContent = 'Sign up successful! Please check your email to confirm your account.';
+          messageDiv.className = 'success';
+          form.reset();
+        }
+      });
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h2>Create Your Account</h2>
+    <form id="signupForm">
+      <label for="firstName">First Name</label>
+      <input type="text" id="firstName" required>
+      <label for="lastName">Last Name</label>
+      <input type="text" id="lastName" required>
+      <label for="email">Email Address</label>
+      <input type="email" id="email" required>
+      <label for="password">Password</label>
+      <input type="password" id="password" required>
+      <button type="submit">Create Account</button>
+    </form>
+    <div id="message"></div>
+  </div>
+</body>
+</html>

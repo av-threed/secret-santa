@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Secret Santa Gift Ideas</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="userInfo" class="user-info">
+    <span id="welcomeMessage"></span>
+    <button onclick="signOut()" class="sign-out-btn">Sign Out</button>
+  </div>
+
+  <div class="main-forms-container">
+    <!-- Adult Gift Form -->
+    <form id="adultGiftForm" class="gift-form adult-form">
+      <h3 class="form-title">Your Gift Ideas</h3>
+      <p class="helper-text">Add gift ideas you would like to receive. Only you can submit ideas for yourself.</p>
+      <label for="adultGiftIdeas">Gift Ideas for You:</label>
+      <textarea id="adultGiftIdeas" name="giftIdeas" rows="4" required></textarea>
+      <button type="submit" class="submit-btn">Add My Gift Ideas</button>
+    </form>
+
+    <!-- Kids Gift Form -->
+    <form id="kidsGiftForm" class="gift-form kids-form">
+      <h3 class="form-title">Suggest Gift Ideas for Kids</h3>
+      <p class="helper-text">Help build a gift suggestion list for the little ones! Other family members can use these ideas for shopping.</p>
+      
+      <div class="form-group">
+        <label for="childSelect">Which child are these ideas for?</label>
+        <select id="childSelect" name="childName" required>
+          <option value="">Select a child...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="kidsGiftIdeas">Gift Ideas for Selected Child:</label>
+        <textarea id="kidsGiftIdeas" name="giftIdeas" rows="4" placeholder="Enter gift suggestions for this child (one per line)...&#13;&#10;Examples:&#13;&#10;- Dinosaur toys&#13;&#10;- Size 4T winter clothes&#13;&#10;- Educational books&#13;&#10;- Favorite characters: Paw Patrol, PJ Masks" required></textarea>
+      </div>
+
+      <div class="tips-section">
+        <h4 class="tips-title">Helpful details to include:</h4>
+        <ul>
+          <li>Sizes for clothes/shoes</li>
+          <li>Favorite characters or themes</li>
+          <li>Specific toys or brands they like</li>
+          <li>Things they already have (to avoid duplicates)</li>
+        </ul>
+      </div>
+
+      <button type="submit" class="submit-btn">Add Gift Suggestions</button>
+    </form>
+  </div>
+
+  <!-- SVG Icons Container -->
+  <div class="svg-container">
+    <object type="image/svg+xml" data="sidebar-icons.svg"></object>
+  </div>
+
+  <!-- Environment Variables (Replace these with your Supabase project values) -->
+  <script>
+    window.env = {
+      SUPABASE_URL: 'your-supabase-url',
+      SUPABASE_KEY: 'your-supabase-key'
+    };
+  </script>
+
+  <!-- Application Scripts -->
+  <script type="module" src="auth.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

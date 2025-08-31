@@ -1,0 +1,65 @@
+-- Enable UUID extension
+create extension if not exists "uuid-ossp";
+
+-- Drop existing tables if they exist in the correct order
+drop table if exists kid_gifts cascade;
+drop table if exists gifts cascade;
+drop table if exists kids cascade;
+
+-- Create tables in the correct order with proper foreign keys
+create table kids (
+    id uuid default uuid_generate_v4() primary key,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    name text not null,
+    created_by uuid references auth.users not null
+);
+
+create table gifts (
+    id uuid default uuid_generate_v4() primary key,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    user_id uuid references auth.users not null,
+    name text not null,
+    price text,
+    link text,
+    notes text
+);
+
+create table kid_gifts (
+    id uuid default uuid_generate_v4() primary key,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    kid_id uuid references kids on delete cascade,
+    created_by uuid references auth.users not null,
+    name text not null,
+    price text,
+    link text,
+    notes text
+);
+
+-- Enable Row Level Security
+alter table kids enable row level security;
+alter table gifts enable row level security;
+alter table kid_gifts enable row level security;
+
+-- Policies for kids table
+create policy "Anyone can read kids"
+    on kids for select
+    using (true);
+
+create policy "Authenticated users can manage kids"
+    on kids for all
+    using (auth.role() = 'authenticated');
+
+-- Policies for gifts table
+create policy "Users can manage their own gifts"
+    on gifts for all
+    using (auth.uid() = user_id);
+
+-- Policies for kid_gifts table
+create policy "Anyone can read kid gifts"
+    on kid_gifts for select
+    using (true);
+
+create policy "Authenticated users can manage kid gifts"
+    on kid_gifts for all
+    using (auth.uid() = created_by);
+   

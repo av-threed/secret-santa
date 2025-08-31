@@ -1,0 +1,176 @@
+:root {
+  /* Core palette */
+  --color-bg: #FFF7ED;
+  --color-surface: #FFFBE7;
+  --color-text: #1A1A1A;
+  --color-primary: #0E5A3A;
+  --color-primary-700: #0B4A2F;
+  --color-secondary: #B21E2B;
+  --color-secondary-700: #8E1823;
+  --color-accent: #C49A17;
+  --color-border: #E8DFC8;
+  --color-link: #0B5FFF;
+  
+  /* Status colors */
+  --status-info: #2563EB;
+  --status-hold: #B45309;
+  --status-done: #15803D;
+  --status-error: #B91C1C;
+  --status-success: #047857;
+}
+
+/* Global styles */
+html, body {
+  background: var(--color-bg);
+  min-height: 100vh;
+  color: var(--color-text);
+  font-family: 'Segoe UI', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Layout */
+.main-forms-container {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 40px auto;
+  max-width: 1200px;
+  padding: 0 20px;
+}
+
+/* Forms */
+.gift-form {
+  background: var(--color-surface);
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(44, 62, 80, 0.13);
+  border: 2px solid var(--color-primary);
+  min-width: 350px;
+  max-width: 400px;
+  flex: 1;
+}
+
+.form-title {
+  color: var(--color-secondary);
+  margin: 0 0 16px 0;
+  font-size: 1.5em;
+}
+
+.helper-text {
+  color: var(--color-text);
+  opacity: 0.8;
+  margin-bottom: 20px;
+}
+
+/* Form inputs */
+label {
+  display: block;
+  color: var(--color-primary);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+select,
+textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--color-text);
+  font-size: 1em;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--color-link);
+  outline-offset: 2px;
+  border-color: var(--color-link);
+}
+
+/* Tips section */
+.tips-section {
+  background: rgba(14, 90, 58, 0.1);
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.tips-title {
+  color: var(--color-primary);
+  margin: 0 0 12px 0;
+  font-size: 1em;
+}
+
+.tips-section ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--color-text);
+  opacity: 0.9;
+}
+
+.tips-section li {
+  margin-bottom: 6px;
+}
+
+/* User info */
+.user-info {
+  text-align: center;
+  color: var(--color-surface);
+  margin-bottom: 20px;
+  padding: 20px;
+  background: var(--color-primary);
+}
+
+/* Buttons */
+button {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background: var(--color-primary-700);
+}
+
+.submit-btn {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.sign-out-btn {
+  background: var(--color-secondary);
+  padding: 8px 16px;
+}
+
+.sign-out-btn:hover {
+  background: var(--color-secondary-700);
+}
+
+/* Utility classes */
+.hidden {
+  display: none !important;
+}
+
+/* Responsive design */
+@media (max-width: 900px) {
+  .main-forms-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .gift-form {
+    width: 100%;
+    max-width: none;
+  }
+}

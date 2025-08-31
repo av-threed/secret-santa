@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Test</title>
+    <style>
+        .message { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        .success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .loading { background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
+    </style>
+    <script type="module">
+        import { handleSignUp } from './auth.js';
+
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded, setting up form handlers...'); // Debug log
+            const form = document.getElementById('signupForm');
+            const messageDiv = document.getElementById('message');
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                messageDiv.className = 'message loading';
+                messageDiv.textContent = 'Signing up...';
+
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const fullName = document.getElementById('fullName').value;
+
+                console.log('Form submitted with email:', email, 'and name:', fullName); // Debug log
+
+                try {
+                    console.log('Calling handleSignUp...'); // Debug log
+                    const { data, error } = await handleSignUp(email, password, fullName);
+                    
+                    if (error) {
+                        console.error('Signup error:', error); // Debug log
+                        throw error;
+                    }
+
+                    console.log('Signup successful:', data); // Debug log
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = 'Success! Please check your email to confirm your account.';
+                } catch (error) {
+                    console.error('Caught error:', error); // Debug log
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = `Error: ${error.message}`;
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>Secret Santa Auth Test</h1>
+    <form id="signupForm">
+        <h2>Sign Up Test</h2>
+        <div>
+            <label for="fullName">Full Name:</label>
+            <input type="text" id="fullName" required>
+        </div>
+        <div>
+            <label for="email">Email:</label>
+            <input type="email" id="email" required>
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" id="password" required>
+        </div>
+        <button type="submit">Sign Up</button>
+    </form>
+    <div id="message"></div>
+</body>
+</html>
