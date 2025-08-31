@@ -8,10 +8,15 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 // Interface for working with gifts
 export async function getMyGifts() {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError) throw userError
+    const userId = userData?.user?.id
+    if (!userId) return []
+
     const { data, error } = await supabase
         .from('gifts')
         .select('*')
-        .eq('user_id', supabase.auth.user().id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -19,22 +24,29 @@ export async function getMyGifts() {
 }
 
 export async function addGiftToList(giftData) {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError) throw userError
+    const userId = userData?.user?.id
+    if (!userId) throw new Error('Not signed in')
+
     const { data, error } = await supabase
         .from('gifts')
-        .insert([{
-            ...giftData,
-            user_id: supabase.auth.user().id
-        }])
+        .insert([{ ...giftData, user_id: userId }])
 
     if (error) throw error
     return data
 }
 
 export async function deleteGift(giftId) {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError) throw userError
+    const userId = userData?.user?.id
+    if (!userId) throw new Error('Not signed in')
+
     const { error } = await supabase
         .from('gifts')
         .delete()
-        .match({ id: giftId, user_id: supabase.auth.user().id })
+        .match({ id: giftId, user_id: userId })
 
     if (error) throw error
 }
@@ -51,27 +63,63 @@ export async function getKids() {
 }
 
 export async function getKidGifts(kidId) {
-    const { data, error } = await supabase
-        .from('kid_gifts')
-        .select(`
-            *,
-            kids (
-                name
-            )
-        `)
+    // Try with relation; if that fails (e.g., metadata mismatch), fall back to simple select
+    let query = supabase.from('kid_gifts')
+        .select('*, kids(name)')
         .eq('kid_id', kidId)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
+    let { data, error } = await query;
+    if (error) {
+        // Fallback without join
+        const res = await supabase
+            .from('kid_gifts')
+            .select('*')
+            .eq('kid_id', kidId)
+            .order('created_at', { ascending: false });
+        if (res.error) throw res.error;
+        return res.data;
+    }
+    return data;
+}
 
-    if (error) throw error
-    return data
+export async function findOrCreateKid(kidName) {
+    const normalized = kidName.trim();
+    if (!normalized) throw new Error('Kid name required');
+
+    // Try to find existing (case-insensitive)
+    const { data: existing, error: findError } = await supabase
+        .from('kids')
+        .select('*')
+        .ilike('name', normalized)
+        .limit(1);
+    if (findError) throw findError;
+    if (existing && existing.length > 0) return existing[0];
+
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    if (!userId) throw new Error('Not signed in');
+
+    const { data, error } = await supabase
+        .from('kids')
+        .insert([{ name: normalized, created_by: userId }])
+        .select('*')
+        .single();
+    if (error) throw error;
+    return data;
 }
 
 export async function addKidGift(kidId, giftData) {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError) throw userError
+    const userId = userData?.user?.id
+    if (!userId) throw new Error('Not signed in')
+
     const { data, error } = await supabase
         .from('kid_gifts')
         .insert([{
             ...giftData,
-            kid_id: kidId
+            kid_id: kidId,
+            created_by: userId
         }])
 
     if (error) throw error
@@ -88,8 +136,9 @@ export async function deleteKidGift(giftId) {
 }
 
 // User session management
-export function getCurrentUser() {
-    return supabase.auth.user()
+export async function getCurrentUser() {
+    const { data } = await supabase.auth.getUser()
+    return data?.user || null
 }
 
 export function onAuthStateChange(callback) {
@@ -105,4 +154,92 @@ export async function signInWithEmail(email) {
 export async function signOut() {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
+}
+
+// App helpers for Secret Santa assignment flow
+export async function getCurrentYear() {
+    const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'current_year')
+        .limit(1)
+        .single();
+    if (!error && data?.value) return parseInt(data.value, 10);
+    return new Date().getFullYear();
+}
+
+export async function getRecipientForBuyer() {
+    const year = await getCurrentYear();
+    const { data: userData } = await supabase.auth.getUser();
+    const buyerId = userData?.user?.id;
+    if (!buyerId) throw new Error('Not signed in');
+
+    const { data, error } = await supabase
+        .from('assignments')
+        .select('recipient_user_id')
+        .eq('buyer_user_id', buyerId)
+        .eq('year', year)
+        .limit(1)
+        .single();
+    if (error) return null;
+    return data?.recipient_user_id || null;
+}
+
+export async function getUserGifts(userId) {
+    const { data, error } = await supabase
+        .from('gifts')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+}
+
+export async function getProfile(userId) {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', userId)
+        .limit(1)
+        .single();
+    if (error) return { full_name: null };
+    return data || { full_name: null };
+}
+
+// Recipient self-serve helpers
+export async function isAssignmentsLocked() {
+    const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'lock_assignments')
+        .limit(1)
+        .single();
+    if (error) return false;
+    return String(data?.value || '').toLowerCase() === 'true';
+}
+
+export async function listProfilesExcludingSelf() {
+    const { data: userData } = await supabase.auth.getUser();
+    const me = userData?.user?.id;
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .neq('id', me)
+        .order('full_name', { ascending: true });
+    if (error) throw error;
+    return data || [];
+}
+
+export async function upsertMyRecipient(recipientUserId) {
+    const year = await getCurrentYear();
+    const { data: userData } = await supabase.auth.getUser();
+    const buyerId = userData?.user?.id;
+    if (!buyerId) throw new Error('Not signed in');
+
+    const payload = [{ year, buyer_user_id: buyerId, recipient_user_id: recipientUserId }];
+    const { data, error } = await supabase
+        .from('assignments')
+        .upsert(payload, { onConflict: 'year,buyer_user_id' });
+    if (error) throw error;
+    return data;
 }

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sign In - Secret Santa</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f8f8; }
+    .container { max-width: 400px; margin: 60px auto; background: #fff; padding: 32px; border-radius: 10px; box-shadow: 0 2px 12px rgba(44,62,80,0.10); border: 2px solid #0E5A3A; }
+    h2 { color: #0E5A3A; text-align: center; }
+    label { display: block; margin-top: 18px; font-weight: bold; color: #0E5A3A; }
+    input { width: 100%; padding: 12px; margin-top: 8px; border-radius: 6px; border: 1.5px solid #E8DFC8; font-size: 1em; background: #fff; color: #222; box-sizing: border-box; }
+    button { margin-top: 28px; background: #0E5A3A; color: #fffbe7; border: none; padding: 14px 28px; border-radius: 6px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(44, 62, 80, 0.10); transition: background 0.2s; }
+    button:hover { background: #0B4A2F; }
+    .error { color: #B91C1C; margin: 10px 0; font-weight: bold; }
+  </style>
+  <script type="module">
+    import { handleSignIn } from './auth.js';
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('signinForm');
+      const msg = document.getElementById('message');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        msg.textContent = '';
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const { error } = await handleSignIn(email, password);
+        if (error) {
+          msg.textContent = error.message || 'Sign in failed';
+          msg.className = 'error';
+        } else {
+          window.location.href = 'index.html';
+        }
+      });
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h2>Sign In</h2>
+    <form id="signinForm">
+      <label for="email">Email Address</label>
+      <input type="email" id="email" required>
+      <label for="password">Password</label>
+      <input type="password" id="password" required>
+      <button type="submit">Sign In</button>
+    </form>
+    <div id="message"></div>
+    <div style="margin-top:16px; text-align:center;">
+      <span>Don't have an account?</span>
+      <a href="signup.html" style="color:#0E5A3A; font-weight:600; margin-left:6px;">Create one</a>
+    </div>
+  </div>
+</body>
+</html>
+

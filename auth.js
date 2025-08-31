@@ -1,5 +1,5 @@
 // auth.js
-import { supabase } from './supabaseClient.js';
+import { supabase } from './supabase.js';
 
 export async function handleSignUp(email, password, fullName) {
     console.log('Starting signup process...'); // Debug log

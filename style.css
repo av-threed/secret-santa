@@ -1,22 +1,22 @@
 :root {
   /* Core palette */
-  --color-bg: #FFF7ED;
-  --color-surface: #FFFBE7;
-  --color-text: #1A1A1A;
-  --color-primary: #0E5A3A;
-  --color-primary-700: #0B4A2F;
-  --color-secondary: #B21E2B;
-  --color-secondary-700: #8E1823;
-  --color-accent: #C49A17;
-  --color-border: #E8DFC8;
-  --color-link: #0B5FFF;
+  --color-bg: #FAF8F5; /* soft ivory */
+  --color-surface: #FFFFFF; /* clean cards */
+  --color-text: #1F2937; /* slate 800 */
+  --color-primary: #0F6D4E; /* evergreen teal */
+  --color-primary-700: #0A4F37;
+  --color-secondary: #A23C3C; /* cranberry */
+  --color-secondary-700: #842E2E;
+  --color-accent: #C8A858; /* muted gold */
+  --color-border: #E7E5E4; /* stone 200 */
+  --color-link: #2563EB; /* blue 600 */
   
   /* Status colors */
   --status-info: #2563EB;
   --status-hold: #B45309;
   --status-done: #15803D;
-  --status-error: #B91C1C;
-  --status-success: #047857;
+  --status-error: #DC2626;
+  --status-success: #059669;
 
   /* Layout */
   --sidebar-width: 250px;
@@ -32,11 +32,45 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: var(--color-bg);
+  /* Sage green background with subtle accents */
+  background: #E6EEE6;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   color: var(--color-text);
   display: flex;
   min-height: 100vh;
 }
+
+/* App Bar */
+.brand-title { font-weight: 700; color: var(--color-primary); font-size: 1.25rem; }
+.chip {
+  background: rgba(12, 90, 58, 0.12);
+  color: var(--color-primary);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.user-menu { position: relative; }
+.user-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: #fff; color: var(--color-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; cursor: pointer;
+}
+.user-dropdown {
+  position: absolute; right: 0; top: 42px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.08);
+  display: none; min-width: 200px;
+}
+.user-dropdown.active { display: block; }
+.user-fullname { padding: 10px 12px; border-bottom: 1px solid var(--color-border); font-weight: 600; }
+.dropdown-item { width: 100%; text-align: left; padding: 10px 12px; background: none; border: none; cursor: pointer; }
+.dropdown-item:hover { background: var(--color-bg); }
 
 /* Sidebar Styles */
 .sidebar {
@@ -51,6 +85,7 @@ body {
   position: fixed;
   left: 0;
   top: 0;
+  z-index: 200; /* Ensure sidebar overlays main content on hover */
 }
 
 .sidebar:hover,
@@ -120,12 +155,47 @@ body {
   width: 100%;
   text-align: left;
   white-space: nowrap;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .sidebar-button:hover {
   background-color: var(--color-bg);
   color: var(--color-primary);
+}
+.sidebar-button.active {
+  background-color: rgba(14,90,58,0.12);
+  color: var(--color-primary);
+}
+
+.sidebar.pinned::before {
+  content: "";
+  position: absolute;
+  right: -2px; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--color-primary);
+}
+
+.badge {
+  margin-left: auto;
+  background: rgba(12,90,58,0.12);
+  color: var(--color-primary);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Loading skeleton */
+.skeleton {
+  background: linear-gradient(90deg, #eee, #f5f5f5, #eee);
+  background-size: 200% 100%;
+  animation: skeleton 1.2s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+@keyframes skeleton {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .sidebar-button svg {
@@ -171,25 +241,35 @@ body {
 /* Main Content Area */
 .main-content {
   margin-left: var(--sidebar-collapsed-width);
-  padding: 40px;
+  padding: 24px 40px 40px;
   flex: 1;
   transition: margin-left 0.3s ease;
   display: flex;
   flex-direction: column;
   height: 100vh;
+  position: relative;
+  z-index: 0;
+  /* Use body gradient; keep content surfaces clean */
+  background: transparent;
 }
 
 .sidebar.pinned + .main-content {
   margin-left: var(--sidebar-width);
 }
+.sidebar.pinned ~ .main-content { margin-left: var(--sidebar-width); }
 
 .welcome-banner {
-  margin-bottom: 40px;
-  padding: 20px;
+  margin-bottom: 24px;
+  padding: 12px 20px;
   background-color: var(--color-surface);
   border-radius: 8px;
   border: 1px solid var(--color-border);
 }
+
+.topbar-center {
+  display: flex; align-items: center; gap: 12px; justify-content: center;
+}
+.topbar-right { position: absolute; right: 24px; top: 14px; display: flex; align-items: center; gap: 12px; }
 
 /* Modal Styles */
 .modal {
@@ -345,6 +425,19 @@ body {
   color: var(--color-text);
 }
 
+/* Align add-child button with select */
+.child-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.child-row > select {
+  flex: 1;
+}
+.child-row > .btn-primary {
+  height: 42px;
+}
+
 /* Notification Styles */
 .notification {
   position: fixed;
@@ -432,7 +525,7 @@ body {
 
 /* Global styles */
 html, body {
-  background: var(--color-bg);
+  /* background: transparent; */
   min-height: 100vh;
   color: var(--color-text);
   font-family: 'Segoe UI', Arial, sans-serif;
@@ -456,8 +549,8 @@ html, body {
   background: var(--color-surface);
   padding: 32px;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(44, 62, 80, 0.13);
-  border: 2px solid var(--color-primary);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  border: 1px solid var(--color-border);
   flex: 1;
   margin: 0;
   height: 100%;

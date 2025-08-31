@@ -1,14 +1,6 @@
 {
-  "port": 8080,
-  "host": "localhost",
-  "root": ".",
-  "open": false,
-  "ignore": [
-    ".git",
-    "node_modules"
-  ],
-  "wait": 1,
-  "mount": {
-    "/": "./"
-  }
+  "public": ".",
+  "cleanUrls": false,
+  "trailingSlash": false,
+  "directoryListing": false
 }
