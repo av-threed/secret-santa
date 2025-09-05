@@ -29,6 +29,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const badgeKids = document.getElementById('badgeKids');
     let currentModal = null;
 
+    // Helpers for link previews
+    function safeDomain(url) {
+        try { return new URL(url).hostname.replace(/^www\./i, ''); } catch { return ''; }
+    }
+    function linkPreviewHTML(url, labelText) {
+        if (!url) return '';
+        const domain = safeDomain(url) || url;
+        const favicon = `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(url)}`;
+        const label = labelText || 'View item';
+        return `
+            <div class="link-preview">
+                <img class="link-favicon" src="${favicon}" alt="" loading="lazy">
+                <div class="link-meta">
+                    <a class="link-domain" href="${url}" target="_blank" rel="noopener noreferrer">${domain}</a>
+                    <div class="link-action">${label}</div>
+                </div>
+            </div>
+        `;
+    }
+
     // Sidebar pin toggle
     sidebarPin.addEventListener('click', () => {
         sidebar.classList.toggle('pinned');
@@ -56,7 +76,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // If no gifts from DB, try localStorage fallback
             if (!gifts || gifts.length === 0) {
                 const local = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]');
-                gifts = local.map(name => ({ id: `local-${name}`, name }));
+                gifts = (Array.isArray(local) ? local : []).map((item) => {
+                    if (typeof item === 'string') {
+                        return { id: `local-${item}`, name: item };
+                    }
+                    const name = item?.name || '';
+                    const link = item?.link || '';
+                    return { id: `local-${name}`, name, link };
+                });
             }
 
             displayGifts(gifts);
@@ -82,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="gift-item-info">
                     <h3>${gift.name}</h3>
                     ${gift.price ? `<p class="gift-price">Price: ${gift.price}</p>` : ''}
-                    ${gift.link ? `<p class=\"gift-link\"><a href=\"${gift.link}\" target=\"_blank\">View</a></p>` : ''}
+                    ${gift.link ? linkPreviewHTML(gift.link, 'Open link') : ''}
                 </div>
                 <div class="gift-item-actions">
                     <button class="btn-icon" aria-label="Delete gift" onclick="deleteGift('${gift.id}')">
@@ -119,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="gift-item-info">
                         <h3>${gift.name}</h3>
                         ${gift.price ? `<p class="gift-price">Price: ${gift.price}</p>` : ''}
-                        ${gift.link ? `<p class="gift-link"><a href="${gift.link}" target="_blank">View Item</a></p>` : ''}
+                        ${gift.link ? linkPreviewHTML(gift.link, 'Open link') : ''}
                         ${gift.notes ? `<p class="gift-notes">${gift.notes}</p>` : ''}
                     </div>
                 `;
@@ -174,6 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="gift-item-info">
                         <h3>${g.name}</h3>
                         ${g.kids?.name ? `<p class="gift-kid-name">For: ${g.kids.name}</p>` : ''}
+                        ${g.link ? linkPreviewHTML(g.link, 'Open link') : ''}
                     </div>
                     <div class="gift-item-actions">
                         <button class="btn-delete" data-id="${g.id}">Delete</button>
@@ -380,7 +408,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof giftId === 'string' && giftId.startsWith('local-')) {
             const name = giftId.slice('local-'.length);
             const stored = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]');
-            const updated = stored.filter(n => n !== name);
+            const updated = (Array.isArray(stored) ? stored : []).filter(item => {
+                if (typeof item === 'string') return item !== name;
+                return (item?.name || '') !== name;
+            });
             localStorage.setItem('my_gift_ideas', JSON.stringify(updated));
             showToast('Gift deleted', 'success', 1500);
             loadMyGifts();
