@@ -11,10 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const kidsGiftListBtn = document.getElementById('kidsGiftList');
     const recipientGiftsBtn = document.getElementById('recipientGifts');
     const setRecipientBtn = document.getElementById('setRecipient');
+    const settingsBtn = document.getElementById('settingsBtn');
     const myGiftListModal = document.getElementById('myGiftListModal');
     const kidsGiftListModal = document.getElementById('kidsGiftListModal');
     const recipientGiftsModal = document.getElementById('recipientGiftsModal');
     const setRecipientModal = document.getElementById('setRecipientModal');
+    const settingsModal = document.getElementById('settingsModal');
+    const settingsForm = document.getElementById('settingsForm');
+    const settingPinSidebar = document.getElementById('settingPinSidebar');
     const closeButtons = document.querySelectorAll('.modal-close');
     const myGiftsList = document.getElementById('myGiftsList');
     const addGiftForm = document.getElementById('addGiftForm');
@@ -28,6 +32,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const badgeMyGifts = document.getElementById('badgeMyGifts');
     const badgeKids = document.getElementById('badgeKids');
     let currentModal = null;
+
+    // Settings helpers
+    function getSettings() {
+        try { return JSON.parse(localStorage.getItem('app_settings') || '{}'); } catch { return {}; }
+    }
+
+    function saveSettings(settings) {
+        try { localStorage.setItem('app_settings', JSON.stringify(settings || {})); } catch {}
+    }
+
+    function applyPinnedFromSettings(settings) {
+        const wantPinned = !!settings?.pinSidebarDefault;
+        if (wantPinned) {
+            sidebar.classList.add('pinned');
+            sidebarPin?.classList.add('active');
+            if (appBar) appBar.classList.add('pinned');
+        } else {
+            sidebar.classList.remove('pinned');
+            sidebarPin?.classList.remove('active');
+            if (appBar) appBar.classList.remove('pinned');
+        }
+    }
+
+    // Apply saved settings on load
+    applyPinnedFromSettings(getSettings());
 
     // Sidebar pin toggle
     sidebarPin.addEventListener('click', () => {
@@ -256,6 +285,10 @@ document.addEventListener('DOMContentLoaded', () => {
             saveRecipientBtn.disabled = locked;
             await populateRecipientOptions();
         }
+        if (modal === settingsModal) {
+            const s = getSettings();
+            if (settingPinSidebar) settingPinSidebar.checked = !!s.pinSidebarDefault;
+        }
 
         // Show the modal
         modal.style.display = 'flex';
@@ -289,12 +322,12 @@ document.addEventListener('DOMContentLoaded', () => {
             currentModal = null;
         }
         // Clear active state when closing any modal
-        [myGiftListBtn, kidsGiftListBtn, recipientGiftsBtn, setRecipientBtn].forEach(b => b && b.classList.remove('active'));
+        [myGiftListBtn, kidsGiftListBtn, recipientGiftsBtn, setRecipientBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
     }
 
     // Open modals from sidebar buttons
     const markActive = (btn) => {
-        [myGiftListBtn, kidsGiftListBtn, recipientGiftsBtn, setRecipientBtn].forEach(b => b && b.classList.remove('active'));
+        [myGiftListBtn, kidsGiftListBtn, recipientGiftsBtn, setRecipientBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
         btn && btn.classList.add('active');
     };
 
@@ -320,6 +353,22 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         markActive(setRecipientBtn);
         await openModal(setRecipientModal);
+    });
+
+    settingsBtn?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        markActive(settingsBtn);
+        await openModal(settingsModal);
+    });
+
+    settingsForm?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const s = getSettings();
+        s.pinSidebarDefault = !!settingPinSidebar?.checked;
+        saveSettings(s);
+        applyPinnedFromSettings(s);
+        showToast('Settings saved');
+        closeModal(settingsModal);
     });
 
     saveRecipientBtn.addEventListener('click', async () => {
