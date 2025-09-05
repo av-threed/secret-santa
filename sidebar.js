@@ -77,20 +77,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         gifts.forEach(gift => {
             const giftElement = document.createElement('div');
-            giftElement.className = 'gift-item';
+            giftElement.className = 'gift-item compact';
             giftElement.innerHTML = `
                 <div class="gift-item-info">
                     <h3>${gift.name}</h3>
                     ${gift.price ? `<p class="gift-price">Price: ${gift.price}</p>` : ''}
-                    ${gift.link ? `<p class="gift-link"><a href="${gift.link}" target="_blank">View Item</a></p>` : ''}
-                    ${gift.notes ? `<p class="gift-notes">${gift.notes}</p>` : ''}
+                    ${gift.link ? `<p class=\"gift-link\"><a href=\"${gift.link}\" target=\"_blank\">View</a></p>` : ''}
                 </div>
                 <div class="gift-item-actions">
-                    <button class="btn-delete" onclick="deleteGift('${gift.id}')">
-                        <svg viewBox="0 0 24 24" width="16" height="16">
+                    <button class="btn-icon" aria-label="Delete gift" onclick="deleteGift('${gift.id}')">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                             <path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
                         </svg>
-                        Delete
                     </button>
                 </div>
             `;
