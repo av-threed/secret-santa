@@ -411,4 +411,22 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = 'signin.html';
         }
     };
+
+    // Onboarding: prompt new users to set their recipient first
+    (async function runRecipientOnboarding() {
+        try {
+            // Only show once per session until they set a recipient
+            const sessionFlagKey = 'recipient_onboarding_shown';
+            if (sessionStorage.getItem(sessionFlagKey)) return;
+
+            const recipientId = await getRecipientForBuyer();
+            if (!recipientId) {
+                sessionStorage.setItem(sessionFlagKey, '1');
+                await openModal(setRecipientModal);
+            }
+        } catch (e) {
+            // Non-blocking
+            console.warn('Onboarding check failed:', e);
+        }
+    })();
 });
