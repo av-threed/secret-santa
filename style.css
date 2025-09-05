@@ -125,6 +125,12 @@ body {
   transition: opacity 0.2s ease;
 }
 
+/* Ensure smaller pin icon size */
+.sidebar-pin svg {
+  width: 18px;
+  height: 18px;
+}
+
 .sidebar-pin:hover {
   opacity: 1;
 }
