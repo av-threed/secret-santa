@@ -54,6 +54,11 @@ create policy "Users can manage their own gifts"
     on gifts for all
     using (auth.uid() = user_id);
 
+-- Allow reading other users' gifts so assigned buyers can view ideas
+create policy "Authenticated users can read gifts"
+    on gifts for select
+    using (auth.role() = 'authenticated');
+
 -- Policies for kid_gifts table
 create policy "Anyone can read kid gifts"
     on kid_gifts for select

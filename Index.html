@@ -33,6 +33,20 @@
         </svg>
         Kids Gift Lists
       </button>
+
+      <button id="recipientGifts" class="sidebar-button">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M12 3C7.58 3 4 6.58 4 11s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8m0 14.5c-2.89 0-5.39-1.64-6.63-4.05.03-2.67 5.33-4.13 6.63-4.13 1.31 0 6.6 1.46 6.63 4.13C17.39 15.86 14.89 17.5 12 17.5m0-9A2.5 2.5 0 1 0 14.5 11 2.5 2.5 0 0 0 12 8.5Z"/>
+        </svg>
+        Recipient's Gift Ideas
+      </button>
+
+      <button id="setRecipient" class="sidebar-button">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M12 1a9 9 0 0 1 9 9c0 3.5-2 6.53-4.92 8l.58 3.5L12 19l-4.66 2.5.58-3.5A9.98 9.98 0 0 1 3 10a9 9 0 0 1 9-9m0 4a3 3 0 1 0 3 3 3 3 0 0 0-3-3m0 12c2.67 0 5.33-1.33 6-2-1-2-4-3-6-3s-5 1-6 3c.67.67 3.33 2 6 2Z"/>
+        </svg>
+        Set Recipient
+      </button>
     </div>
     
     <button onclick="signOut()" class="sidebar-signout">
@@ -83,6 +97,35 @@
             </select>
           </div>
           <div id="selectedKidGifts" class="gifts-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recipient Gifts Modal -->
+    <div id="recipientGiftsModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Recipient's Gift Ideas</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="recipientHeader" class="helper-text" style="margin-bottom:12px;"></div>
+          <div id="recipientGiftsList" class="gifts-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Set Recipient Modal -->
+    <div id="setRecipientModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Choose Your Recipient</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="recipientStatus" class="helper-text" style="margin-bottom:12px;"></div>
+          <select id="recipientSelect"></select>
+          <button id="saveRecipientBtn" class="btn-primary" style="margin-top:10px;">Save Recipient</button>
         </div>
       </div>
     </div>
