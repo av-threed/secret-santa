@@ -70,6 +70,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // Parse a single line for optional title and URL into { name, link }
+    function parseGiftLine(line) {
+        const text = String(line || '').trim();
+        if (!text) return null;
+        // [Title](https://example.com)
+        const mdMatch = text.match(/^\s*\[(.+?)\]\((https?:\/\/[^\s)]+)\)\s*$/i);
+        if (mdMatch) {
+            return { name: mdMatch[1].trim(), link: mdMatch[2].trim() };
+        }
+        // Title - https://example.com  OR  Title: https://example.com
+        const titleBeforeUrl = text.match(/^(.+?)\s*[\-:\u2013\u2014]\s*(https?:\/\/\S+)\s*$/i);
+        if (titleBeforeUrl) {
+            return { name: titleBeforeUrl[1].trim(), link: titleBeforeUrl[2].trim() };
+        }
+        // https://example.com - Title (optional title after URL)
+        const urlBeforeTitle = text.match(/^(https?:\/\/\S+)\s*(?:[\-:\u2013\u2014]\s*(.+))?$/i);
+        if (urlBeforeTitle) {
+            const link = urlBeforeTitle[1].trim();
+            const maybeTitle = (urlBeforeTitle[2] || '').trim();
+            return { name: maybeTitle || link, link };
+        }
+        // No URL; treat entire line as name only
+        return { name: text };
+    }
+
     adultGiftForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const giftIdeas = document.getElementById('adultGiftIdeas').value;
@@ -84,15 +109,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (user && user.id) {
                 // Add each gift to the database
                 for (const giftText of gifts) {
-                    await addGiftToList({ name: giftText.trim() });
-                    addedGifts.push(giftText.trim());
+                    const parsed = parseGiftLine(giftText);
+                    if (!parsed) continue;
+                    const payload = { name: parsed.name };
+                    if (parsed.link) payload.link = parsed.link;
+                    await addGiftToList(payload);
+                    addedGifts.push(parsed.name);
                 }
             } else {
                 // Local fallback storage
-                const existing = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]');
-                gifts.forEach(g => existing.push(g.trim()));
+                const existingRaw = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]');
+                const existing = Array.isArray(existingRaw) ? existingRaw : [];
+                for (const line of gifts) {
+                    const parsed = parseGiftLine(line);
+                    if (!parsed) continue;
+                    existing.push({ name: parsed.name, link: parsed.link || '' });
+                    addedGifts.push(parsed.name);
+                }
                 localStorage.setItem('my_gift_ideas', JSON.stringify(existing));
-                addedGifts.push(...gifts.map(g => g.trim()));
             }
             
             // Clear the form
@@ -121,7 +155,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let successCount = 0;
             for (const line of lines) {
                 try {
-                    await addKidGift(kidId, { name: line });
+                    const parsed = parseGiftLine(line);
+                    if (!parsed) continue;
+                    const payload = { name: parsed.name };
+                    if (parsed.link) payload.link = parsed.link;
+                    await addKidGift(kidId, payload);
                     successCount++;
                 } catch (err) {
                     // Ignore duplicates (unique index violation)

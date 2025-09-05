@@ -425,6 +425,38 @@ body {
   opacity: 0.8;
 }
 
+/* Simple link preview */
+.link-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 6px;
+}
+.link-favicon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+.link-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.link-domain {
+  color: var(--color-link);
+  text-decoration: none;
+  font-weight: 600;
+}
+.link-domain:hover { text-decoration: underline; }
+.link-action {
+  color: #64748b;
+  font-size: 12px;
+}
+
 .gift-item-actions {
   display: flex;
   gap: 8px;
