@@ -50,8 +50,20 @@ create policy "Authenticated users can manage kids"
     using (auth.role() = 'authenticated');
 
 -- Policies for gifts table
-create policy "Users can manage their own gifts"
-    on gifts for all
+create policy "Authenticated users can read gifts"
+    on gifts for select
+    using (auth.role() = 'authenticated');
+
+create policy "Users can insert their own gifts"
+    on gifts for insert
+    with check (auth.uid() = user_id);
+
+create policy "Users can update their own gifts"
+    on gifts for update
+    using (auth.uid() = user_id);
+
+create policy "Users can delete their own gifts"
+    on gifts for delete
     using (auth.uid() = user_id);
 
 -- Policies for kid_gifts table
