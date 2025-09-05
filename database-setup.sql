@@ -35,6 +35,10 @@ create table kid_gifts (
     notes text
 );
 
+-- Prevent duplicate suggestions per kid by name (case-insensitive)
+create unique index if not exists kid_gifts_kid_name_unique
+on kid_gifts (kid_id, lower(name));
+
 -- Enable Row Level Security
 alter table kids enable row level security;
 alter table gifts enable row level security;
@@ -50,9 +54,26 @@ create policy "Authenticated users can manage kids"
     using (auth.role() = 'authenticated');
 
 -- Policies for gifts table
-create policy "Users can manage their own gifts"
-    on gifts for all
+create policy "Authenticated users can read gifts"
+    on gifts for select
+    using (auth.role() = 'authenticated');
+
+create policy "Users can insert their own gifts"
+    on gifts for insert
+    with check (auth.uid() = user_id);
+
+create policy "Users can update their own gifts"
+    on gifts for update
     using (auth.uid() = user_id);
+
+create policy "Users can delete their own gifts"
+    on gifts for delete
+    using (auth.uid() = user_id);
+
+-- Allow reading other users' gifts so assigned buyers can view ideas
+create policy "Authenticated users can read gifts"
+    on gifts for select
+    using (auth.role() = 'authenticated');
 
 -- Policies for kid_gifts table
 create policy "Anyone can read kid gifts"

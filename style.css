@@ -125,6 +125,12 @@ body {
   transition: opacity 0.2s ease;
 }
 
+/* Ensure smaller pin icon size */
+.sidebar-pin svg {
+  width: 18px;
+  height: 18px;
+}
+
 .sidebar-pin:hover {
   opacity: 1;
 }
@@ -218,10 +224,10 @@ body {
   display: flex;
   align-items: center;
   gap: 15px;
-  background: none;
-  border: none;
+  background: transparent;
+  border: 1px solid var(--color-secondary);
   cursor: pointer;
-  color: var(--color-text);
+  color: var(--color-secondary);
   width: calc(100% - 20px);
   border-radius: 8px;
   text-align: left;
@@ -230,8 +236,13 @@ body {
 }
 
 .sidebar-signout:hover {
-  background-color: var(--color-bg);
-  color: var(--color-secondary);
+  background-color: var(--color-secondary);
+  color: var(--color-surface);
+}
+
+.sidebar-signout:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
 }
 
 .sidebar-signout svg {
@@ -386,11 +397,21 @@ body {
 .gift-item {
   background-color: var(--color-bg);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 15px;
+  border-radius: 10px;
+  padding: 12px 14px;
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 10px;
+  gap: 8px;
+}
+
+/* Compact variant for dense lists inside modals */
+.gift-item.compact {
+  background-color: #fbfbfb;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
 }
 
 .gift-item-info h3 {
@@ -406,9 +427,25 @@ body {
 
 .gift-item-actions {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
+  gap: 8px;
+  align-items: center;
 }
+
+/* Icon-only, compact delete button */
+.btn-icon {
+  background: transparent;
+  color: var(--status-error);
+  border: 1px solid rgba(220,38,38,0.18);
+  padding: 6px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+.btn-icon:hover { background: rgba(220,38,38,0.08); }
+.btn-icon svg { display: block; }
 
 /* Kid Selector Styles */
 .kids-selector {
