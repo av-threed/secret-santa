@@ -35,6 +35,10 @@ create table kid_gifts (
     notes text
 );
 
+-- Prevent duplicate suggestions per kid by name (case-insensitive)
+create unique index if not exists kid_gifts_kid_name_unique
+on kid_gifts (kid_id, lower(name));
+
 -- Enable Row Level Security
 alter table kids enable row level security;
 alter table gifts enable row level security;
