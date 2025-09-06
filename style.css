@@ -641,6 +641,11 @@ textarea {
   box-sizing: border-box;
 }
 
+/* Make kids gift ideas box larger by default */
+#kidsGiftIdeas {
+  min-height: 260px;
+}
+
 select:focus,
 textarea:focus {
   outline: 2px solid var(--color-link);
