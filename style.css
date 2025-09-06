@@ -370,7 +370,7 @@ body {
 
 .gift-form textarea {
   resize: vertical;
-  min-height: 80px;
+  min-height: 240px;
 }
 
 .btn-primary {
