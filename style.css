@@ -117,11 +117,11 @@ body {
 
 .sidebar-pin {
   background: none;
-  border: none;
+  border: 2px solid transparent;
   cursor: pointer;
   padding: 5px;
-  color: var(--color-text);
-  opacity: 0.6;
+  color: var(--color-link);
+  opacity: 1;
   transition: opacity 0.2s ease;
 }
 
@@ -131,14 +131,9 @@ body {
   height: 18px;
 }
 
-.sidebar-pin:hover {
-  opacity: 1;
-}
+.sidebar-pin:hover { opacity: 0.9; }
 
-.sidebar-pin.active {
-  color: var(--color-primary);
-  opacity: 1;
-}
+.sidebar-pin.active { color: var(--color-link); opacity: 1; }
 
 .sidebar-content {
   flex: 1;
