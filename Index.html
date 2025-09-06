@@ -13,8 +13,11 @@
     <div class="sidebar-header">
       <h2>Gift Lists</h2>
       <button id="sidebarPin" class="sidebar-pin" title="Pin Sidebar">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path fill="currentColor" d="M12 2c.55 0 1 .45 1 1v5.17l3.59 3.59c.39.39.39 1.02 0 1.41-.2.2-.45.29-.71.29H13v4.59l1.29 1.29c.39.39.39 1.02 0 1.41-.39.39-1.02.39-1.41 0l-1.59-1.59-1.59 1.59c-.39.39-1.02.39-1.41 0-.39-.39-.39-1.02 0-1.41L11 18.46V13H7.12c-.26 0-.51-.1-.71-.29-.39-.39-.39-1.02 0-1.41L10 8.17V3c0-.55.45-1 1-1h1z"/>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none">
+          <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" stroke-width="2"/>
+          <circle cx="12" cy="8" r="1.6" fill="currentColor"/>
+          <path d="M12 9.8V15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M12 20l-2.6-4.2h5.2L12 20z" fill="currentColor"/>
         </svg>
       </button>
     </div>
@@ -47,6 +50,13 @@
         </svg>
         Set Recipient
       </button>
+
+      <button id="settingsBtn" class="sidebar-button">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M12,15.5A3.5,3.5 0 1,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.98C19.47,12.66 19.5,12.34 19.5,12C19.5,11.66 19.47,11.34 19.43,11.02L21.54,9.37C21.73,9.22 21.78,8.96 21.66,8.75L19.66,5.25C19.54,5.04 19.28,4.97 19.06,5.05L16.56,6.05C16,5.64 15.39,5.31 14.73,5.07L14.33,2.42C14.29,2.18 14.09,2 13.84,2H10.16C9.91,2 9.71,2.18 9.67,2.42L9.27,5.07C8.61,5.31 8,5.64 7.44,6.05L4.94,5.05C4.72,4.97 4.46,5.04 4.34,5.25L2.34,8.75C2.22,8.96 2.27,9.22 2.46,9.37L4.57,11.02C4.53,11.34 4.5,11.66 4.5,12C4.5,12.34 4.53,12.66 4.57,12.98L2.46,14.63C2.27,14.78 2.22,15.04 2.34,15.25L4.34,18.75C4.46,18.96 4.72,19.03 4.94,18.95L7.44,17.95C8,18.36 8.61,18.69 9.27,18.93L9.67,21.58C9.71,21.82 9.91,22 10.16,22H13.84C14.09,22 14.29,21.82 14.33,21.58L14.73,18.93C15.39,18.69 16,18.36 16.56,17.95L19.06,18.95C19.28,19.03 19.54,18.96 19.66,18.75L21.66,15.25C21.78,15.04 21.73,14.78 21.54,14.63L19.43,12.98Z" />
+        </svg>
+        Settings
+      </button>
     </div>
     
     <button onclick="signOut()" class="sidebar-signout">
@@ -59,6 +69,9 @@
 
   <!-- Main Content -->
   <main class="main-content">
+    <div class="topbar-center">
+      <h1 class="brand-title">Secret Santa</h1>
+    </div>
     <div id="welcomeBanner" class="welcome-banner">
       <span id="welcomeMessage"></span>
     </div>
@@ -130,13 +143,33 @@
       </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Settings</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="settingsForm" class="settings-form">
+            <label class="setting-item">
+              <input type="checkbox" id="settingPinSidebar">
+              Pin sidebar by default
+            </label>
+            <div class="helper-text">These settings are saved on this device.</div>
+            <button type="submit" class="btn-primary" style="margin-top:10px;">Save Settings</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <div class="main-forms-container">
     <!-- Adult Gift Form -->
     <form id="adultGiftForm" class="gift-form adult-form">
       <h3 class="form-title">Your Gift Ideas</h3>
       <p class="helper-text">Add gift ideas you would like to receive. Only you can submit ideas for yourself.</p>
       <label for="adultGiftIdeas">Gift Ideas for You:</label>
-      <textarea id="adultGiftIdeas" name="giftIdeas" rows="4" required></textarea>
+      <textarea id="adultGiftIdeas" name="giftIdeas" rows="12" required></textarea>
       <button type="submit" class="submit-btn">Add My Gift Ideas</button>
     </form>
 

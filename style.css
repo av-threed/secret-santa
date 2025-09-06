@@ -117,11 +117,11 @@ body {
 
 .sidebar-pin {
   background: none;
-  border: none;
+  border: 2px solid transparent;
   cursor: pointer;
   padding: 5px;
-  color: var(--color-text);
-  opacity: 0.6;
+  color: var(--color-link);
+  opacity: 1;
   transition: opacity 0.2s ease;
 }
 
@@ -131,14 +131,9 @@ body {
   height: 18px;
 }
 
-.sidebar-pin:hover {
-  opacity: 1;
-}
+.sidebar-pin:hover { opacity: 0.9; }
 
-.sidebar-pin.active {
-  color: var(--color-primary);
-  opacity: 1;
-}
+.sidebar-pin.active { color: var(--color-link); opacity: 1; }
 
 .sidebar-content {
   flex: 1;
@@ -370,7 +365,7 @@ body {
 
 .gift-form textarea {
   resize: vertical;
-  min-height: 80px;
+  min-height: 240px;
 }
 
 .btn-primary {
@@ -513,6 +508,20 @@ body {
   }
 }
 
+/* Settings */
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
 @keyframes fade-out {
   from {
     transform: translateX(0);
@@ -625,6 +634,11 @@ textarea {
   font-size: 1em;
   margin-bottom: 16px;
   box-sizing: border-box;
+}
+
+/* Make kids gift ideas box larger by default */
+#kidsGiftIdeas {
+  min-height: 260px;
 }
 
 select:focus,
