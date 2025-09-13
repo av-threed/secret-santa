@@ -1,5 +1,6 @@
 :root {
   /* Core palette */
+  --color-page-bg: #E6EEE6;
   --color-bg: #FAF8F5; /* soft ivory */
   --color-surface: #FFFFFF; /* clean cards */
   --color-text: #1F2937; /* slate 800 */
@@ -10,6 +11,7 @@
   --color-accent: #C8A858; /* muted gold */
   --color-border: #E7E5E4; /* stone 200 */
   --color-link: #2563EB; /* blue 600 */
+  --color-page-bg: #E6EEE6;
   
   /* Status colors */
   --status-info: #2563EB;
@@ -23,6 +25,51 @@
   --sidebar-collapsed-width: 60px;
 }
 
+/* Dark theme variables */
+[data-theme='dark'] {
+  --color-page-bg: #0f1620;
+  --color-bg: #0f1620;
+  --color-surface: #131c28;
+  --color-text: #E5E7EB;
+  --color-primary: #2DD4BF;
+  --color-primary-700: #14B8A6;
+  --color-secondary: #F43F5E;
+  --color-secondary-700: #E11D48;
+  --color-accent: #F59E0B;
+  --color-border: #1f2a37;
+  --color-link: #60A5FA;
+
+  --status-info: #60A5FA;
+  --status-hold: #D97706;
+  --status-done: #10B981;
+  --status-error: #EF4444;
+  --status-success: #10B981;
+}
+
+/* System theme follows prefers-color-scheme */
+[data-theme='system'] { }
+@media (prefers-color-scheme: dark) {
+  [data-theme='system'] {
+    --color-page-bg: #0f1620;
+    --color-bg: #0f1620;
+    --color-surface: #131c28;
+    --color-text: #E5E7EB;
+    --color-primary: #2DD4BF;
+    --color-primary-700: #14B8A6;
+    --color-secondary: #F43F5E;
+    --color-secondary-700: #E11D48;
+    --color-accent: #F59E0B;
+    --color-border: #1f2a37;
+    --color-link: #60A5FA;
+
+    --status-info: #60A5FA;
+    --status-hold: #D97706;
+    --status-done: #10B981;
+    --status-error: #EF4444;
+    --status-success: #10B981;
+  }
+}
+
 /* Reset and Base Styles */
 * {
   margin: 0;
@@ -33,7 +80,7 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   /* Sage green background with subtle accents */
-  background: #E6EEE6;
+  background: var(--color-page-bg);
   background-attachment: fixed;
   background-repeat: no-repeat;
   color: var(--color-text);
@@ -56,7 +103,7 @@ body {
 .user-avatar {
   width: 32px; height: 32px; border-radius: 50%;
   border: 1px solid var(--color-border);
-  background: #fff; color: var(--color-primary);
+  background: var(--color-surface); color: var(--color-primary);
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; cursor: pointer;
 }
@@ -401,7 +448,7 @@ body {
 
 /* Compact variant for dense lists inside modals */
 .gift-item.compact {
-  background-color: #fbfbfb;
+  background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 8px 10px;
@@ -629,7 +676,7 @@ textarea {
   padding: 12px;
   border: 1.5px solid var(--color-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--color-text);
   font-size: 1em;
   margin-bottom: 16px;
