@@ -198,18 +198,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             gifts.forEach(g => {
                 const el = document.createElement('div');
-                el.className = 'gift-item';
+                // Match My Gift List compact card style
+                el.className = 'gift-item compact';
                 el.innerHTML = `
                     <div class="gift-item-info">
                         <h3>${g.name}</h3>
-                        ${g.kids?.name ? `<p class="gift-kid-name">For: ${g.kids.name}</p>` : ''}
+                        ${g.kids?.name ? `<p class=\"gift-kid-name\">For: ${g.kids.name}</p>` : ''}
                     </div>
                     <div class="gift-item-actions">
-                        <button class="btn-delete" data-id="${g.id}">Delete</button>
+                        <button class="btn-icon" aria-label="Delete suggestion" data-id="${g.id}">
+                            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                <path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+                            </svg>
+                        </button>
                     </div>
                 `;
                 selectedKidGifts.appendChild(el);
-                el.querySelector('.btn-delete').addEventListener('click', async () => {
+                el.querySelector('.btn-icon').addEventListener('click', async () => {
                     const ok = await confirmDialog({ title: 'Delete Suggestion', message: 'Delete this suggestion?', confirmText: 'Delete' });
                     if (!ok) return;
                     try { await deleteKidGift(g.id); showToast('Deleted'); loadKidGifts(kidId); } catch (e) { showToast('Failed to delete', 'error'); }
