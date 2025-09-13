@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsModal = document.getElementById('settingsModal');
     const settingsForm = document.getElementById('settingsForm');
     const settingPinSidebar = document.getElementById('settingPinSidebar');
+    const settingEnableNotifications = document.getElementById('settingEnableNotifications');
+    const settingEnableReminders = document.getElementById('settingEnableReminders');
+    const settingReminderTime = document.getElementById('settingReminderTime');
+    const settingReminderFrequency = document.getElementById('settingReminderFrequency');
     const closeButtons = document.querySelectorAll('.modal-close');
     const myGiftsList = document.getElementById('myGiftsList');
     const addGiftForm = document.getElementById('addGiftForm');
@@ -288,6 +292,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modal === settingsModal) {
             const s = getSettings();
             if (settingPinSidebar) settingPinSidebar.checked = !!s.pinSidebarDefault;
+            if (settingEnableNotifications) settingEnableNotifications.checked = s.notificationsEnabled ?? true;
+            if (settingEnableReminders) settingEnableReminders.checked = s.remindersEnabled ?? true;
+            if (settingReminderTime) settingReminderTime.value = s.reminderTime || '18:00';
+            if (settingReminderFrequency) settingReminderFrequency.value = s.reminderFrequency || 'daily';
         }
 
         // Show the modal
@@ -365,6 +373,10 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const s = getSettings();
         s.pinSidebarDefault = !!settingPinSidebar?.checked;
+        s.notificationsEnabled = !!settingEnableNotifications?.checked;
+        s.remindersEnabled = !!settingEnableReminders?.checked;
+        s.reminderTime = settingReminderTime?.value || '18:00';
+        s.reminderFrequency = settingReminderFrequency?.value || 'daily';
         saveSettings(s);
         applyPinnedFromSettings(s);
         showToast('Settings saved');

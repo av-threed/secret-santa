@@ -156,6 +156,27 @@
               <input type="checkbox" id="settingPinSidebar">
               Pin sidebar by default
             </label>
+            <h3 style="margin-top:10px;">Notifications & Reminders</h3>
+            <label class="setting-item">
+              <input type="checkbox" id="settingEnableNotifications" checked>
+              Enable in-app notifications
+            </label>
+            <label class="setting-item">
+              <input type="checkbox" id="settingEnableReminders" checked>
+              Remind me to add gift ideas
+            </label>
+            <div class="setting-item">
+              <span>Reminder time</span>
+              <input type="time" id="settingReminderTime" value="18:00" style="margin-left:auto">
+            </div>
+            <div class="setting-item">
+              <span>Reminder frequency</span>
+              <select id="settingReminderFrequency" style="margin-left:auto">
+                <option value="daily" selected>Daily</option>
+                <option value="weekly_fri">Weekly (Friday)</option>
+                <option value="off">Off</option>
+              </select>
+            </div>
             <div class="helper-text">These settings are saved on this device.</div>
             <button type="submit" class="btn-primary" style="margin-top:10px;">Save Settings</button>
           </form>
