@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsModal = document.getElementById('settingsModal');
     const settingsForm = document.getElementById('settingsForm');
     const settingPinSidebar = document.getElementById('settingPinSidebar');
+    const settingTheme = document.getElementById('settingTheme');
     const closeButtons = document.querySelectorAll('.modal-close');
     const myGiftsList = document.getElementById('myGiftsList');
     const addGiftForm = document.getElementById('addGiftForm');
@@ -55,8 +56,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function applyThemeFromSettings(settings) {
+        const raw = (settings && settings.theme) ? settings.theme : 'system';
+        const applied = (raw === 'light' || raw === 'dark') ? raw : 'system';
+        document.documentElement.setAttribute('data-theme', applied);
+    }
+
     // Apply saved settings on load
-    applyPinnedFromSettings(getSettings());
+    (function initSettingsOnLoad(){
+        const s = getSettings();
+        applyPinnedFromSettings(s);
+        applyThemeFromSettings(s);
+    })();
 
     // Sidebar pin toggle
     sidebarPin.addEventListener('click', () => {
@@ -293,6 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modal === settingsModal) {
             const s = getSettings();
             if (settingPinSidebar) settingPinSidebar.checked = !!s.pinSidebarDefault;
+            if (settingTheme) settingTheme.value = s.theme || 'system';
         }
 
         // Show the modal
@@ -370,8 +382,10 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const s = getSettings();
         s.pinSidebarDefault = !!settingPinSidebar?.checked;
+        s.theme = settingTheme?.value || 'system';
         saveSettings(s);
         applyPinnedFromSettings(s);
+        applyThemeFromSettings(s);
         showToast('Settings saved');
         closeModal(settingsModal);
     });
