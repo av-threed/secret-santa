@@ -32,7 +32,10 @@ create table kid_gifts (
     name text not null,
     price text,
     link text,
-    notes text
+    notes text,
+    -- Claiming support
+    claimed_by uuid references auth.users,
+    claimed_at timestamp with time zone
 );
 
 -- Prevent duplicate suggestions per kid by name (case-insensitive)
@@ -80,7 +83,31 @@ create policy "Anyone can read kid gifts"
     on kid_gifts for select
     using (true);
 
-create policy "Authenticated users can manage kid gifts"
-    on kid_gifts for all
-    using (auth.uid() = created_by);
+-- Original creator can update/delete their own suggestions
+create policy "Creators can manage their kid gifts"
+    on kid_gifts for update using (auth.uid() = created_by)
+    with check (auth.uid() = created_by);
+
+create policy "Creators can delete their kid gifts"
+    on kid_gifts for delete using (auth.uid() = created_by);
+
+-- Any authenticated user can claim or unclaim a suggestion.
+-- This policy allows updating rows where the resulting claim is either set to the caller
+-- or cleared (unclaimed). It intentionally does not permit insert/delete.
+create policy "Authenticated users can claim or unclaim kid gifts"
+    on kid_gifts for update
+    using (auth.role() = 'authenticated')
+    with check (
+        -- allow claiming to self
+        (claimed_by = auth.uid() and claimed_at is not null)
+        OR
+        -- or unclaiming
+        (claimed_by is null and claimed_at is null)
+        OR
+        -- or creator performing a full update
+        (auth.uid() = created_by)
+    );
+
+-- Helpful indexes
+create index if not exists kid_gifts_claimed_by_idx on kid_gifts(claimed_by);
    

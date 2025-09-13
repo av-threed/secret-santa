@@ -135,6 +135,43 @@ export async function deleteKidGift(giftId) {
     if (error) throw error
 }
 
+// Claiming helpers for kid gifts
+export async function claimKidGift(giftId) {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    if (!userId) throw new Error('Not signed in');
+
+    const { data, error } = await supabase
+        .from('kid_gifts')
+        .update({ claimed_by: userId, claimed_at: new Date().toISOString() })
+        .eq('id', giftId)
+        .is('claimed_by', null)
+        .select('id, claimed_by, claimed_at')
+        .single();
+
+    if (error) throw error;
+    if (!data) throw new Error('Already claimed');
+    return data;
+}
+
+export async function unclaimKidGift(giftId) {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    if (!userId) throw new Error('Not signed in');
+
+    const { data, error } = await supabase
+        .from('kid_gifts')
+        .update({ claimed_by: null, claimed_at: null })
+        .eq('id', giftId)
+        .eq('claimed_by', userId)
+        .select('id')
+        .single();
+
+    if (error) throw error;
+    if (!data) throw new Error('You are not the claimer');
+    return data;
+}
+
 // User session management
 export async function getCurrentUser() {
     const { data } = await supabase.auth.getUser()

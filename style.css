@@ -426,6 +426,27 @@ body {
   align-items: center;
 }
 
+/* Claiming styles */
+.gift-item.claimed {
+  opacity: 0.8;
+  position: relative;
+}
+.gift-claimed-label {
+  margin-top: 6px !important;
+  color: var(--status-hold);
+  font-weight: 600;
+}
+.btn-claim {
+  background-color: var(--status-success);
+  color: #fff;
+}
+.btn-claim:hover { background-color: #0e7a56; }
+.btn-unclaim {
+  background-color: #6b7280;
+  color: #fff;
+}
+.btn-unclaim:hover { background-color: #4b5563; }
+
 /* Icon-only, compact delete button */
 .btn-icon {
   background: transparent;

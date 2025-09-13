@@ -1,5 +1,5 @@
 // Import Supabase functions
-import { getMyGifts, deleteGift, addGiftToList, signOut as supaSignOut, getKids, getKidGifts, deleteKidGift, getRecipientForBuyer, getUserGifts, getProfile, listProfilesExcludingSelf, upsertMyRecipient, isAssignmentsLocked } from './supabase.js';
+import { getMyGifts, deleteGift, addGiftToList, signOut as supaSignOut, getKids, getKidGifts, deleteKidGift, getRecipientForBuyer, getUserGifts, getProfile, listProfilesExcludingSelf, upsertMyRecipient, isAssignmentsLocked, claimKidGift, unclaimKidGift, getCurrentUser } from './supabase.js';
 import { confirmDialog, showToast } from './ui.js';
 
 // Sidebar functionality
@@ -196,15 +196,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedKidGifts.innerHTML = '<p class="no-gifts-message">No suggestions yet.</p>';
                 return;
             }
+            const mePromise = getCurrentUser?.() || Promise.resolve(null);
+            const me = await mePromise;
             gifts.forEach(g => {
                 const el = document.createElement('div');
-                el.className = 'gift-item';
+                const isClaimed = !!g.claimed_by;
+                const isMine = me && g.claimed_by === me.id;
+                el.className = `gift-item ${isClaimed ? 'claimed' : ''}`;
                 el.innerHTML = `
                     <div class="gift-item-info">
                         <h3>${g.name}</h3>
                         ${g.kids?.name ? `<p class="gift-kid-name">For: ${g.kids.name}</p>` : ''}
+                        ${isClaimed ? `<p class="gift-claimed-label">${isMine ? 'Claimed by you' : 'Claimed'}</p>` : ''}
                     </div>
                     <div class="gift-item-actions">
+                        ${!isClaimed ? `<button class="btn-claim" data-action="claim" data-id="${g.id}">Claim</button>` : ''}
+                        ${isMine ? `<button class="btn-unclaim" data-action="unclaim" data-id="${g.id}">Unclaim</button>` : ''}
                         <button class="btn-delete" data-id="${g.id}">Delete</button>
                     </div>
                 `;
@@ -214,6 +221,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!ok) return;
                     try { await deleteKidGift(g.id); showToast('Deleted'); loadKidGifts(kidId); } catch (e) { showToast('Failed to delete', 'error'); }
                 });
+                const claimBtn = el.querySelector('[data-action="claim"]');
+                const unclaimBtn = el.querySelector('[data-action="unclaim"]');
+                if (claimBtn) {
+                    claimBtn.addEventListener('click', async () => {
+                        try { await claimKidGift(g.id); showToast('Claimed'); loadKidGifts(kidId); } catch (e) { showToast(e?.message || 'Failed to claim', 'error'); }
+                    });
+                }
+                if (unclaimBtn) {
+                    unclaimBtn.addEventListener('click', async () => {
+                        try { await unclaimKidGift(g.id); showToast('Unclaimed'); loadKidGifts(kidId); } catch (e) { showToast(e?.message || 'Failed to unclaim', 'error'); }
+                    });
+                }
             });
         } catch (e) { console.error('Failed to load kid gifts', e); }
     }
