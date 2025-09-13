@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsModal = document.getElementById('settingsModal');
     const settingsForm = document.getElementById('settingsForm');
     const settingPinSidebar = document.getElementById('settingPinSidebar');
+    const settingCurrency = document.getElementById('settingCurrency');
     const closeButtons = document.querySelectorAll('.modal-close');
     const myGiftsList = document.getElementById('myGiftsList');
     const addGiftForm = document.getElementById('addGiftForm');
@@ -57,6 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Apply saved settings on load
     applyPinnedFromSettings(getSettings());
+    // Ensure default currency is set
+    try {
+        const initSettings = getSettings();
+        if (!initSettings.currency) {
+            initSettings.currency = 'USD';
+            saveSettings(initSettings);
+        }
+    } catch {}
 
     // Sidebar pin toggle
     sidebarPin.addEventListener('click', () => {
@@ -288,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modal === settingsModal) {
             const s = getSettings();
             if (settingPinSidebar) settingPinSidebar.checked = !!s.pinSidebarDefault;
+            if (settingCurrency) settingCurrency.value = s.currency || 'USD';
         }
 
         // Show the modal
@@ -365,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const s = getSettings();
         s.pinSidebarDefault = !!settingPinSidebar?.checked;
+        s.currency = settingCurrency?.value || 'USD';
         saveSettings(s);
         applyPinnedFromSettings(s);
         showToast('Settings saved');
