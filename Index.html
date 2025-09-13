@@ -69,10 +69,8 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    <div class="topbar-center">
-      <h1 class="brand-title">Secret Santa</h1>
-    </div>
     <div id="welcomeBanner" class="welcome-banner">
+      <h1 class="brand-title">Secret Santa</h1>
       <span id="welcomeMessage"></span>
     </div>
 
@@ -156,6 +154,14 @@
               <input type="checkbox" id="settingPinSidebar">
               Pin sidebar by default
             </label>
+            <div class="setting-item">
+              <label for="settingTheme" style="margin: 0;">Theme</label>
+              <select id="settingTheme">
+                <option value="system">System theme</option>
+                <option value="light">Light theme</option>
+                <option value="dark">Dark theme</option>
+              </select>
+            </div>
             <div class="helper-text">These settings are saved on this device.</div>
             <button type="submit" class="btn-primary" style="margin-top:10px;">Save Settings</button>
           </form>
