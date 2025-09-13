@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsModal = document.getElementById('settingsModal');
     const settingsForm = document.getElementById('settingsForm');
     const settingPinSidebar = document.getElementById('settingPinSidebar');
+    const settingOpenLinks = document.getElementById('settingOpenLinksNewTab');
     const closeButtons = document.querySelectorAll('.modal-close');
     const myGiftsList = document.getElementById('myGiftsList');
     const addGiftForm = document.getElementById('addGiftForm');
@@ -98,6 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Display gifts in the modal
     function displayGifts(gifts) {
         myGiftsList.innerHTML = '';
+        const s = getSettings();
+        const shouldNewTab = s.openLinksInNewTab !== false;
         
         if (!gifts || gifts.length === 0) {
             myGiftsList.innerHTML = '<p class="no-gifts-message">No gifts added yet.</p>';
@@ -111,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="gift-item-info">
                     <h3>${gift.name}</h3>
                     ${gift.price ? `<p class="gift-price">Price: ${gift.price}</p>` : ''}
-                    ${gift.link ? `<p class=\"gift-link\"><a href=\"${gift.link}\" target=\"_blank\">View</a></p>` : ''}
+                    ${gift.link ? `<p class=\"gift-link\"><a href=\"${gift.link}\"${shouldNewTab ? ' target=\\"_blank\\" rel=\\"noopener\\"' : ''}>View</a></p>` : ''}
                 </div>
                 <div class="gift-item-actions">
                     <button class="btn-icon" aria-label="Delete gift" onclick="deleteGift('${gift.id}')">
@@ -141,6 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 recipientGiftsList.innerHTML = '<p class="no-gifts-message">No gift ideas yet.</p>';
                 return;
             }
+            const s = getSettings();
+            const shouldNewTab = s.openLinksInNewTab !== false;
             gifts.forEach(gift => {
                 const el = document.createElement('div');
                 el.className = 'gift-item';
@@ -148,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="gift-item-info">
                         <h3>${gift.name}</h3>
                         ${gift.price ? `<p class="gift-price">Price: ${gift.price}</p>` : ''}
-                        ${gift.link ? `<p class="gift-link"><a href="${gift.link}" target="_blank">View Item</a></p>` : ''}
+                        ${gift.link ? `<p class="gift-link"><a href="${gift.link}"${shouldNewTab ? ' target="_blank" rel="noopener"' : ''}>View Item</a></p>` : ''}
                         ${gift.notes ? `<p class="gift-notes">${gift.notes}</p>` : ''}
                     </div>
                 `;
@@ -288,6 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modal === settingsModal) {
             const s = getSettings();
             if (settingPinSidebar) settingPinSidebar.checked = !!s.pinSidebarDefault;
+            if (settingOpenLinks) settingOpenLinks.checked = s.openLinksInNewTab !== false;
         }
 
         // Show the modal
@@ -365,6 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const s = getSettings();
         s.pinSidebarDefault = !!settingPinSidebar?.checked;
+        s.openLinksInNewTab = !!settingOpenLinks?.checked;
         saveSettings(s);
         applyPinnedFromSettings(s);
         showToast('Settings saved');
