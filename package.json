@@ -2,6 +2,8 @@
   "name": "secret-santa",
   "version": "1.0.0",
   "scripts": {
-    "start": "npx serve"
+    "start": "npx serve",
+    "supabase:serve": "supabase functions serve link-preview --no-verify-jwt",
+    "supabase:deploy": "supabase functions deploy link-preview"
   }
 }

@@ -1,3 +1,11 @@
+-- Optional: server-side cache table for link previews
+create table if not exists link_previews (
+  normalized_url text primary key,
+  data jsonb not null,
+  fetched_at timestamptz not null default now()
+);
+create index if not exists link_previews_fetched_at_idx on link_previews (fetched_at desc);
+
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
