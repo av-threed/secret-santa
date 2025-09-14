@@ -40,8 +40,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function extractLinkFromName(name) {
-        const m = String(name||'').match(/\((https?:[^)]+)\)\s*$/i);
-        return m ? m[1] : null;
+        const text = String(name || '');
+        // 1) (https://....) at end
+        let m = text.match(/\((https?:[^)\s]+)\)\s*$/i);
+        if (m) return m[1];
+        // 2) any http(s) substring
+        m = text.match(/https?:\/\/[\w\-._~:/?#[\]@!$&'()*+,;=%]+/i);
+        if (m) return m[0].replace(/[)\]]+$/, '');
+        return null;
     }
 
     // Local kids fallback & claims
