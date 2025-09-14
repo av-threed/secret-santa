@@ -14,10 +14,11 @@
     .error { color: #B91C1C; margin: 10px 0; font-weight: bold; }
   </style>
   <script type="module">
-    import { handleSignIn } from './auth.js';
+    import { handleSignIn, sendPasswordReset } from './auth.js';
     document.addEventListener('DOMContentLoaded', () => {
       const form = document.getElementById('signinForm');
       const msg = document.getElementById('message');
+      const forgotBtn = document.getElementById('forgotBtn');
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         msg.textContent = '';
@@ -30,6 +31,14 @@
         } else {
           window.location.href = 'index.html';
         }
+      });
+      forgotBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        msg.textContent = '';
+        const email = document.getElementById('email').value.trim();
+        const { error } = await sendPasswordReset(email);
+        msg.textContent = error ? (error.message || 'Failed to send reset email') : 'Password reset email sent. Check your inbox.';
+        msg.className = error ? 'error' : '';
       });
     });
   </script>
@@ -45,6 +54,9 @@
       <button type="submit">Sign In</button>
     </form>
     <div id="message"></div>
+    <div style="margin-top:10px; text-align:center;">
+      <a href="#" id="forgotBtn" style="color:#0E5A3A; font-weight:600;">Forgot password?</a>
+    </div>
     <div style="margin-top:16px; text-align:center;">
       <span>Don't have an account?</span>
       <a href="signup.html" style="color:#0E5A3A; font-weight:600; margin-left:6px;">Create one</a>

@@ -59,3 +59,16 @@ export async function handleSignOut() {
         return { error };
     }
 }
+
+export async function sendPasswordReset(email) {
+    try {
+        if (!email) throw new Error('Enter your email first');
+        const redirectTo = `${window.location.origin}/reset-password.html`;
+        const { data, error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+        if (error) throw error;
+        return { data, error: null };
+    } catch (error) {
+        console.error('Error in sendPasswordReset:', error);
+        return { data: null, error };
+    }
+}
