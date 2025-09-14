@@ -388,31 +388,7 @@
 
     async function loadMyGiftsProd(){ /* reuse sidebar behavior: trigger refresh */ }
 
-    async function loadKidGiftsDev(kidId){
-      selectedKidGifts.innerHTML='';
-      try{ const list = await getKidGifts(kidId); const items=[...(list||[]).map(parseKidGift), ...getLocalKidGifts(kidId)]; await renderKidGiftsDev(items,kidId); }
-      catch{ await renderKidGiftsDev(getLocalKidGifts(kidId),kidId); }
-    }
-    function parseKidGift(g){ const name=String(g?.name||''); let link=null; const cap=name.replace(/\s*\((https?:[^)]+)\)\s*$/i,(m,u)=>{ link=u; return '';}).trim(); return { id:g.id, name:cap||name, link, claimed_by:g.claimed_by||null, claimed_at:g.claimed_at||null } }
-
-    async function renderKidGiftsDev(items,kidId){
-      let myId=null; try{ const u=await getCurrentUser(); myId=u?.id||null; }catch{}
-      if(!items||items.length===0){ selectedKidGifts.innerHTML='<p class="no-gifts-message">No suggestions yet.</p>'; return; }
-      selectedKidGifts.innerHTML='';
-      items.forEach(it=>{ const hasLink=!!it.link; const isClaimed=!!it.claimed_by; const isMine=isClaimed&&myId&&String(it.claimed_by)===String(myId); const isLocal=String(it.id).startsWith('local-kid-'); const claimControls = isLocal ? (!isClaimed?`<button class="btn-icon btn-claim-kid" data-id="${it.id}" data-kid="${kidId}">🤝</button>`:`<button class="btn-icon btn-unclaim-kid" data-id="${it.id}" data-kid="${kidId}">✖️</button>`) : (!isClaimed?`<button class="btn-icon btn-claim-kid" data-id="${it.id}" data-kid="${kidId}">🤝</button>`:(isMine?`<button class="btn-icon btn-unclaim-kid" data-id="${it.id}" data-kid="${kidId}">✖️</button>`:`<span style="font-size:12px;opacity:.7;">Claimed</span>`)); const container=document.createElement('div'); container.className=`gift-item ${hasLink?'link-card':'compact'}`; if(hasLink){ const dom=domainFromUrl(it.link); container.innerHTML=`<div style="display:flex; gap:12px; align-items:center; width:100%;"><a href="${it.link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;"><div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;"><img class="dev-kid-preview-img" src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy"></div><div class="gift-item-info" style="flex:1 1 auto; min-width:0;"><h3 class="dev-kid-title" style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${it.name||'(Link)'}</h3><p class="gift-link" style="margin:0; color:#4b5563; font-size:13px;">${dom} ↗</p></div></a><div class="gift-item-actions" style="margin-left:auto;">${claimControls}<button class="btn-icon btn-edit-kid-dev" data-id="${it.id}" data-kid="${kidId}">✎</button><button class="btn-icon btn-delete-kid-dev" data-id="${it.id}" data-kid="${kidId}">🗑️</button></div></div>`; }
-        else { container.innerHTML=`<div class="gift-item-info"><h3>${it.name}</h3></div><div class="gift-item-actions" style="margin-left:auto;">${claimControls}<button class="btn-icon btn-delete-kid-dev" data-id="${it.id}" data-kid="${kidId}">🗑️</button></div>`; }
-        selectedKidGifts.appendChild(container); });
-
-      // Delegated delete
-      selectedKidGifts.addEventListener('click', async (e)=>{ const btn=e.target.closest('.btn-delete-kid-dev'); if(!btn) return; e.preventDefault(); const id=btn.getAttribute('data-id'); const kidIdAttr=btn.getAttribute('data-kid')||kidId; const ok=await confirmDialog({title:'Delete Suggestion', message:'Delete this suggestion?', confirmText:'Delete'}); if(!ok) return; try{ if(id.startsWith('local-kid-')){ const enc=id.substring(id.indexOf(kidIdAttr+'-')+(kidIdAttr+'-').length); const raw=decodeURIComponent(enc); const key=localKeyForKid(kidIdAttr); const arr=JSON.parse(localStorage.getItem(key)||'[]'); localStorage.setItem(key, JSON.stringify(arr.filter(x=>x!==raw))); const claims=getLocalClaimSet(kidIdAttr); if(claims.has(raw)){ claims.delete(raw); saveLocalClaimSet(kidIdAttr,claims);} } else { await deleteKidGift(id);} showToast('Deleted'); setTimeout(()=>loadKidGiftsDev(kidIdAttr),50);}catch(err){ showToast('Failed to delete','error'); }});
-
-      // Delegated claim/unclaim
-      selectedKidGifts.addEventListener('click', async (e)=>{ const claim=e.target.closest('.btn-claim-kid'); const unclaim=e.target.closest('.btn-unclaim-kid'); if(!claim && !unclaim) return; e.preventDefault(); const idAttr=(claim||unclaim).getAttribute('data-id'); const kidIdAttr=(claim||unclaim).getAttribute('data-kid'); if(idAttr.startsWith('local-kid-')){ const enc=idAttr.substring(idAttr.indexOf(kidIdAttr+'-')+(kidIdAttr+'-').length); const raw=decodeURIComponent(enc); const claims=getLocalClaimSet(kidIdAttr); if(claim){ claims.add(raw); showToast('Claimed (local)'); } else { claims.delete(raw); showToast('Unclaimed (local)'); } saveLocalClaimSet(kidIdAttr,claims); setTimeout(()=>loadKidGiftsDev(kidIdAttr),50); return; } const user=await getCurrentUser().catch(()=>null); if(!user?.id){ showToast('Sign in to claim','error'); return; } try{ if(claim){ const {data,error}=await supabase.from('kid_gifts').update({claimed_by:user.id, claimed_at:new Date().toISOString()}).eq('id',idAttr).is('claimed_by',null).select('id'); if(error) throw error; if(!data||data.length===0){ showToast('Already claimed','error'); return;} showToast('Claimed'); } else { const {data,error}=await supabase.from('kid_gifts').update({claimed_by:null, claimed_at:null}).eq('id',idAttr).eq('claimed_by',user.id).select('id'); if(error) throw error; if(!data||data.length===0){ showToast('Cannot unclaim this item','error'); return;} showToast('Unclaimed'); } setTimeout(()=>loadKidGiftsDev(kidIdAttr),50);}catch(err){ console.error(err); showToast('Failed to update claim','error'); }});
-    }
-
-    // Open modals refresh
-    kidsListBtn?.addEventListener('click', ()=> setTimeout(()=>{ const kidId=kidSelectorInModal?.value||''; if(kidId) loadKidGiftsDev(kidId); },250));
-    kidSelectorInModal?.addEventListener('change',(e)=> setTimeout(()=> loadKidGiftsDev(e.target.value),50));
+    // Note: Kids modal rendering and actions are handled by sidebar.js to avoid duplicate listeners
   </script>
 </body>
 </html>
