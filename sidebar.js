@@ -1,6 +1,6 @@
 // Import Supabase functions
 import { getMyGifts, deleteGift, addGiftToList, signOut as supaSignOut, getKids, getKidGifts, deleteKidGift, getRecipientForBuyer, getUserGifts, getProfile, listProfilesExcludingSelf, upsertMyRecipient, isAssignmentsLocked } from './supabase.js';
-import { confirmDialog, showToast } from './ui.js';
+import { confirmDialog, showToast, editGiftDialog } from './ui.js';
 
 // Sidebar functionality
 document.addEventListener('DOMContentLoaded', () => {
@@ -33,6 +33,46 @@ document.addEventListener('DOMContentLoaded', () => {
     const badgeMyGifts = document.getElementById('badgeMyGifts');
     const badgeKids = document.getElementById('badgeKids');
     let currentModal = null;
+
+    // --- Helpers shared with dev page ---
+    function domainFromUrl(href) {
+        try { return new URL(href).hostname.replace(/^www\./, ''); } catch { return ''; }
+    }
+
+    function extractLinkFromName(name) {
+        const m = String(name||'').match(/\((https?:[^)]+)\)\s*$/i);
+        return m ? m[1] : null;
+    }
+
+    // Local kids fallback & claims
+    function localKeyForKid(kidId) { return `kid_gifts_local:${kidId}`; }
+    function localClaimKeyForKid(kidId) { return `kid_gifts_claims:${kidId}`; }
+    function getLocalClaimSet(kidId) {
+        try { return new Set(JSON.parse(localStorage.getItem(localClaimKeyForKid(kidId)) || '[]')); } catch { return new Set(); }
+    }
+    function saveLocalClaimSet(kidId, set) {
+        try { localStorage.setItem(localClaimKeyForKid(kidId), JSON.stringify(Array.from(set))); } catch {}
+    }
+    function getLocalKidGifts(kidId) {
+        try {
+            const arr = JSON.parse(localStorage.getItem(localKeyForKid(kidId)) || '[]');
+            const claims = getLocalClaimSet(kidId);
+            return arr.map(raw => {
+                const link = extractLinkFromName(raw);
+                const claimed_by = claims.has(raw) ? 'local' : null;
+                return { id: `local-kid-${kidId}-${encodeURIComponent(raw)}`, name: raw, link, claimed_by, local_key: raw };
+            });
+        } catch { return []; }
+    }
+    function deleteLocalKidGift(kidId, rawName) {
+        try {
+            const key = localKeyForKid(kidId);
+            const arr = JSON.parse(localStorage.getItem(key) || '[]');
+            localStorage.setItem(key, JSON.stringify(arr.filter(x => x !== rawName)));
+            const claims = getLocalClaimSet(kidId);
+            if (claims.has(rawName)) { claims.delete(rawName); saveLocalClaimSet(kidId, claims); }
+        } catch {}
+    }
 
     // Settings helpers
     function getSettings() {
@@ -106,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Display gifts in the modal
+    // Display gifts in the modal (render link cards)
     function displayGifts(gifts) {
         myGiftsList.innerHTML = '';
         
@@ -117,22 +157,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
         gifts.forEach(gift => {
             const giftElement = document.createElement('div');
-            giftElement.className = 'gift-item compact';
-            giftElement.innerHTML = `
-                <div class="gift-item-info">
-                    <h3>${gift.name}</h3>
-                    ${gift.price ? `<p class="gift-price">Price: ${gift.price}</p>` : ''}
-                    ${gift.link ? `<p class=\"gift-link\"><a href=\"${gift.link}\" target=\"_blank\">View</a></p>` : ''}
-                </div>
-                <div class="gift-item-actions">
-                    <button class="btn-icon" aria-label="Delete gift" onclick="deleteGift('${gift.id}')">
-                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                            <path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
-                        </svg>
-                    </button>
-                </div>
-            `;
+            const link = gift.link || extractLinkFromName(gift.name);
+            const hasLink = !!link;
+            giftElement.className = `gift-item ${hasLink ? 'link-card' : 'compact'}`;
+            if (hasLink) {
+                const dom = domainFromUrl(link);
+                const titleText = String(gift.name||'').replace(/\s*\((https?:[^)]+)\)\s*$/i,'').trim() || '(Link)';
+                giftElement.innerHTML = `
+                    <div style="display:flex; gap:12px; align-items:center; width:100%;">
+                      <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">
+                        <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                          <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">
+                        </div>
+                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">
+                          <h3 style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${titleText}</h3>
+                          <p class="gift-link" style="margin:0; color:#4b5563; font-size:13px; overflow-wrap:anywhere;">${dom} ↗</p>
+                        </div>
+                      </a>
+                      <div class="gift-item-actions" style="margin-left:auto;">
+                        <button class="btn-icon btn-edit-my" aria-label="Edit gift" data-id="${gift.id}">✎</button>
+                        <button class="btn-icon" aria-label="Delete gift" onclick="deleteGift('${gift.id}')">🗑️</button>
+                      </div>
+                    </div>`;
+            } else {
+                giftElement.innerHTML = `
+                    <div class="gift-item-info">
+                      <h3 style="overflow-wrap:anywhere; word-break:break-word;">${gift.name}</h3>
+                    </div>
+                    <div class="gift-item-actions">
+                      <button class="btn-icon btn-edit-my" aria-label="Edit gift" data-id="${gift.id}">✎</button>
+                      <button class="btn-icon" aria-label="Delete gift" onclick="deleteGift('${gift.id}')">🗑️</button>
+                    </div>`;
+            }
             myGiftsList.appendChild(giftElement);
+        });
+
+        // Edit buttons
+        myGiftsList.querySelectorAll('.btn-edit-my').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-id');
+                const card = btn.closest('.gift-item');
+                const titleEl = card?.querySelector('.gift-item-info h3');
+                const currentName = (titleEl?.textContent || '').trim();
+                const currentLink = card?.querySelector('a[href]')?.getAttribute('href') || '';
+                const res = await editGiftDialog({ title: 'Edit gift', initialName: currentName, initialLink: currentLink });
+                if (!res) return;
+                const newName = res.name || currentName; const newLink = res.link || '';
+                // Local-only gifts
+                if (typeof id === 'string' && id.startsWith('local-')) {
+                    const oldName = id.slice('local-'.length);
+                    const stored = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]');
+                    const idx = stored.indexOf(oldName);
+                    const display = newLink ? `${newName} (${newLink})` : newName;
+                    if (idx >= 0) stored[idx] = display;
+                    localStorage.setItem('my_gift_ideas', JSON.stringify(stored));
+                    loadMyGifts();
+                    return;
+                }
+                // DB path: simulate update via delete+insert
+                try {
+                    await deleteGift(id);
+                    const payload = newLink ? { name: newName, link: newLink } : { name: newName };
+                    await addGiftToList(payload);
+                    loadMyGifts();
+                } catch (e) { showToast('Failed to edit gift', 'error'); }
+            });
         });
     }
 
@@ -201,7 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadKidGifts(kidId) {
         if (!kidId) { selectedKidGifts.innerHTML = ''; return; }
         try {
-            const gifts = await getKidGifts(kidId);
+            const giftsDb = await getKidGifts(kidId);
+            const gifts = [ ...(giftsDb || []), ...getLocalKidGifts(kidId) ];
             selectedKidGifts.innerHTML = '';
             if (!gifts || gifts.length === 0) {
                 selectedKidGifts.innerHTML = '<p class="no-gifts-message">No suggestions yet.</p>';
@@ -209,27 +299,56 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             gifts.forEach(g => {
                 const el = document.createElement('div');
-                // Match My Gift List compact card style
-                el.className = 'gift-item compact';
-                el.innerHTML = `
-                    <div class="gift-item-info">
-                        <h3>${g.name}</h3>
-                        ${g.kids?.name ? `<p class=\"gift-kid-name\">For: ${g.kids.name}</p>` : ''}
-                    </div>
-                    <div class="gift-item-actions">
-                        <button class="btn-icon" aria-label="Delete suggestion" data-id="${g.id}">
-                            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                                <path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
-                            </svg>
-                        </button>
-                    </div>
-                `;
+                const link = g.link || extractLinkFromName(g.name);
+                const hasLink = !!link;
+                const isLocal = String(g.id).startsWith('local-kid-');
+                const isClaimed = !!g.claimed_by;
+                el.className = `gift-item ${hasLink ? 'link-card' : 'compact'}`;
+                const claimControls = isLocal ? (!isClaimed?`<button class=\"btn-icon btn-claim-kid\" data-id=\"${g.id}\" data-kid=\"${kidId}\">🤝</button>`:`<button class=\"btn-icon btn-unclaim-kid\" data-id=\"${g.id}\" data-kid=\"${kidId}\">✖️</button>`) : '';
+                if (hasLink) {
+                    const dom = domainFromUrl(link);
+                    const titleText = String(g.name||'').replace(/\s*\((https?:[^)]+)\)\s*$/i,'').trim() || '(Link)';
+                    el.innerHTML = `
+                    <div style=\"display:flex; gap:12px; align-items:center; width:100%;\">\n                      <a href=\"${link}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;\">\n                        <div style=\"flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;\">\n                          <img src=\"https://www.google.com/s2/favicons?domain=${dom}&sz=64\" alt=\"${dom}\" width=\"24\" height=\"24\" loading=\"lazy\">\n                        </div>\n                        <div class=\"gift-item-info\" style=\"flex:1 1 auto; min-width:0;\">\n                          <h3 style=\"margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;\">${titleText}<\/h3>\n                          <p class=\"gift-link\" style=\"margin:0; color:#4b5563; font-size:13px;\">${dom} ↗<\/p>\n                        <\/div>\n                      <\/a>\n                      <div class=\"gift-item-actions\" style=\"margin-left:auto;\">\n                        ${claimControls}\n                        <button class=\"btn-icon btn-delete-kid-dev\" aria-label=\"Delete suggestion\" data-id=\"${g.id}\" data-kid=\"${kidId}\">🗑️<\/button>\n                      <\/div>\n                    <\/div>`;
+                } else {
+                    el.innerHTML = `
+                      <div class=\"gift-item-info\">\n                        <h3>${g.name}<\/h3>\n                      <\/div>\n                      <div class=\"gift-item-actions\" style=\"margin-left:auto;\">\n                        ${claimControls}\n                        <button class=\"btn-icon btn-delete-kid-dev\" aria-label=\"Delete suggestion\" data-id=\"${g.id}\" data-kid=\"${kidId}\">🗑️<\/button>\n                      <\/div>`;
+                }
                 selectedKidGifts.appendChild(el);
-                el.querySelector('.btn-icon').addEventListener('click', async () => {
-                    const ok = await confirmDialog({ title: 'Delete Suggestion', message: 'Delete this suggestion?', confirmText: 'Delete' });
-                    if (!ok) return;
-                    try { await deleteKidGift(g.id); showToast('Deleted'); loadKidGifts(kidId); } catch (e) { showToast('Failed to delete', 'error'); }
-                });
+            });
+            // Delegated delete
+            selectedKidGifts.addEventListener('click', async (ev) => {
+                const btn = ev.target.closest('.btn-delete-kid-dev');
+                if (!btn) return;
+                const id = btn.getAttribute('data-id');
+                const ok = await confirmDialog({ title: 'Delete Suggestion', message: 'Delete this suggestion?', confirmText: 'Delete' });
+                if (!ok) return;
+                try {
+                    if (id.startsWith('local-kid-')) {
+                        const enc = id.substring(id.indexOf(kidId + '-') + (kidId + '-').length);
+                        deleteLocalKidGift(kidId, decodeURIComponent(enc));
+                    } else {
+                        await deleteKidGift(id);
+                    }
+                    showToast('Deleted');
+                    loadKidGifts(kidId);
+                } catch (e) { showToast('Failed to delete', 'error'); }
+            });
+
+            // Delegated claim/unclaim (local only here; DB claims are handled on dev page / future)
+            selectedKidGifts.addEventListener('click', async (ev) => {
+                const claim = ev.target.closest('.btn-claim-kid');
+                const unclaim = ev.target.closest('.btn-unclaim-kid');
+                if (!claim && !unclaim) return;
+                const idAttr = (claim || unclaim).getAttribute('data-id');
+                if (!idAttr.startsWith('local-kid-')) return; // skip DB here
+                const enc = idAttr.substring(idAttr.indexOf(kidId + '-') + (kidId + '-').length);
+                const raw = decodeURIComponent(enc);
+                const set = getLocalClaimSet(kidId);
+                if (claim) { set.add(raw); showToast('Claimed (local)'); }
+                else { set.delete(raw); showToast('Unclaimed (local)'); }
+                saveLocalClaimSet(kidId, set);
+                loadKidGifts(kidId);
             });
         } catch (e) { console.error('Failed to load kid gifts', e); }
     }
