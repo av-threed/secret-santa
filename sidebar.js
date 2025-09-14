@@ -296,6 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadKidGifts(kidId) {
         if (!kidId) { selectedKidGifts.innerHTML = ''; return; }
         try {
+            // Determine current user id for claim ownership
+            let me = null; try { const { supabase } = await import('./supabase.js'); const { data: userData } = await supabase.auth.getUser(); me = userData?.user?.id || null; } catch {}
             const giftsDb = await getKidGifts(kidId);
             const gifts = [ ...(giftsDb || []), ...getLocalKidGifts(kidId) ];
             selectedKidGifts.innerHTML = '';
@@ -309,8 +311,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const hasLink = !!link;
                 const isLocal = String(g.id).startsWith('local-kid-');
                 const isClaimed = !!g.claimed_by;
+                const isMine = isClaimed && me && String(g.claimed_by) === String(me);
                 el.className = `gift-item ${hasLink ? 'link-card' : 'compact'}`;
-                const claimControls = isLocal ? (!isClaimed?`<button class=\"btn-icon btn-claim-kid\" data-id=\"${g.id}\" data-kid=\"${kidId}\">🤝</button>`:`<button class=\"btn-icon btn-unclaim-kid\" data-id=\"${g.id}\" data-kid=\"${kidId}\">✖️</button>`) : '';
+                const claimControls = isLocal
+                  ? (!isClaimed ? `<button class=\"btn-icon btn-claim-kid\" data-id=\"${g.id}\" data-kid=\"${kidId}\">🤝</button>` : `<button class=\"btn-icon btn-unclaim-kid\" data-id=\"${g.id}\" data-kid=\"${kidId}\">✖️</button>`)
+                  : (!isClaimed ? `<button class=\"btn-icon btn-claim-kid\" data-id=\"${g.id}\" data-kid=\"${kidId}\">🤝</button>` : (isMine ? `<button class=\"btn-icon btn-unclaim-kid\" data-id=\"${g.id}\" data-kid=\"${kidId}\">✖️</button>` : `<span style=\"font-size:12px;opacity:.7;\">Claimed</span>`));
                 if (hasLink) {
                     const dom = domainFromUrl(link);
                     const titleText = String(g.name||'').replace(/\s*\((https?:[^)]+)\)\s*$/i,'').trim() || '(Link)';
