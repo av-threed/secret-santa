@@ -80,6 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch {}
     }
 
+    // Guard to avoid attaching duplicate delegated handlers
+    let kidsDeleteBound = false;
+    let kidsClaimBound = false;
+
     // Settings helpers
     function getSettings() {
         try { return JSON.parse(localStorage.getItem('app_settings') || '{}'); } catch { return {}; }
@@ -327,75 +331,82 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 selectedKidGifts.appendChild(el);
             });
-            // Delegated delete
-            selectedKidGifts.addEventListener('click', async (ev) => {
-                const btn = ev.target.closest('.btn-delete-kid-dev');
-                if (!btn) return;
-                const id = btn.getAttribute('data-id');
-                const ok = await confirmDialog({ title: 'Delete Suggestion', message: 'Delete this suggestion?', confirmText: 'Delete' });
-                if (!ok) return;
-                try {
-                    if (id.startsWith('local-kid-')) {
-                        const enc = id.substring(id.indexOf(kidId + '-') + (kidId + '-').length);
-                        deleteLocalKidGift(kidId, decodeURIComponent(enc));
-                    } else {
-                        await deleteKidGift(id);
-                    }
-                    showToast('Deleted');
-                    loadKidGifts(kidId);
-                } catch (e) { showToast('Failed to delete', 'error'); }
-            });
+            // Delegated delete (attach once)
+            if (!kidsDeleteBound) {
+                selectedKidGifts.addEventListener('click', async (ev) => {
+                    const btn = ev.target.closest('.btn-delete-kid-dev');
+                    if (!btn) return;
+                    const id = btn.getAttribute('data-id');
+                    const currentKidId = kidSelector.value;
+                    const ok = await confirmDialog({ title: 'Delete Suggestion', message: 'Delete this suggestion?', confirmText: 'Delete' });
+                    if (!ok) return;
+                    try {
+                        if (id.startsWith('local-kid-')) {
+                            const enc = id.substring(id.indexOf(currentKidId + '-') + (currentKidId + '-').length);
+                            deleteLocalKidGift(currentKidId, decodeURIComponent(enc));
+                        } else {
+                            await deleteKidGift(id);
+                        }
+                        showToast('Deleted');
+                        loadKidGifts(currentKidId);
+                    } catch (e) { showToast('Failed to delete', 'error'); }
+                });
+                kidsDeleteBound = true;
+            }
 
-            // Delegated claim/unclaim (local + DB)
-            selectedKidGifts.addEventListener('click', async (ev) => {
-                const claim = ev.target.closest('.btn-claim-kid');
-                const unclaim = ev.target.closest('.btn-unclaim-kid');
-                if (!claim && !unclaim) return;
-                const idAttr = (claim || unclaim).getAttribute('data-id');
-                if (idAttr.startsWith('local-kid-')) {
-                    const enc = idAttr.substring(idAttr.indexOf(kidId + '-') + (kidId + '-').length);
-                    const raw = decodeURIComponent(enc);
-                    const set = getLocalClaimSet(kidId);
-                    if (claim) { set.add(raw); showToast('Claimed (local)'); }
-                    else { set.delete(raw); showToast('Unclaimed (local)'); }
-                    saveLocalClaimSet(kidId, set);
-                    loadKidGifts(kidId);
-                    return;
-                }
-
-                // DB-backed claim/unclaim requires auth
-                try {
-                    const { supabase } = await import('./supabase.js');
-                    const { data: userData } = await supabase.auth.getUser();
-                    const me = userData?.user?.id;
-                    if (!me) { showToast('Sign in to claim', 'error'); return; }
-                    if (claim) {
-                        const { data, error } = await supabase
-                          .from('kid_gifts')
-                          .update({ claimed_by: me, claimed_at: new Date().toISOString() })
-                          .eq('id', idAttr)
-                          .is('claimed_by', null)
-                          .select('id');
-                        if (error) throw error;
-                        if (!data || data.length === 0) { showToast('Already claimed', 'error'); return; }
-                        showToast('Claimed');
-                    } else {
-                        const { data, error } = await supabase
-                          .from('kid_gifts')
-                          .update({ claimed_by: null, claimed_at: null })
-                          .eq('id', idAttr)
-                          .eq('claimed_by', me)
-                          .select('id');
-                        if (error) throw error;
-                        if (!data || data.length === 0) { showToast('Cannot unclaim this item', 'error'); return; }
-                        showToast('Unclaimed');
+            // Delegated claim/unclaim (attach once)
+            if (!kidsClaimBound) {
+                selectedKidGifts.addEventListener('click', async (ev) => {
+                    const claim = ev.target.closest('.btn-claim-kid');
+                    const unclaim = ev.target.closest('.btn-unclaim-kid');
+                    if (!claim && !unclaim) return;
+                    const idAttr = (claim || unclaim).getAttribute('data-id');
+                    const currentKidId = kidSelector.value;
+                    if (idAttr.startsWith('local-kid-')) {
+                        const enc = idAttr.substring(idAttr.indexOf(currentKidId + '-') + (currentKidId + '-').length);
+                        const raw = decodeURIComponent(enc);
+                        const set = getLocalClaimSet(currentKidId);
+                        if (claim) { set.add(raw); showToast('Claimed (local)'); }
+                        else { set.delete(raw); showToast('Unclaimed (local)'); }
+                        saveLocalClaimSet(currentKidId, set);
+                        loadKidGifts(currentKidId);
+                        return;
                     }
-                    loadKidGifts(kidId);
-                } catch (err) {
-                    console.error('claim/unclaim failed', err);
-                    showToast('Failed to update claim', 'error');
-                }
-            });
+                    // DB-backed claim/unclaim
+                    try {
+                        const { supabase } = await import('./supabase.js');
+                        const { data: userData } = await supabase.auth.getUser();
+                        const me = userData?.user?.id;
+                        if (!me) { showToast('Sign in to claim', 'error'); return; }
+                        if (claim) {
+                            const { data, error } = await supabase
+                              .from('kid_gifts')
+                              .update({ claimed_by: me, claimed_at: new Date().toISOString() })
+                              .eq('id', idAttr)
+                              .is('claimed_by', null)
+                              .select('id');
+                            if (error) throw error;
+                            if (!data || data.length === 0) { showToast('Already claimed', 'error'); return; }
+                            showToast('Claimed');
+                        } else {
+                            const { data, error } = await supabase
+                              .from('kid_gifts')
+                              .update({ claimed_by: null, claimed_at: null })
+                              .eq('id', idAttr)
+                              .eq('claimed_by', me)
+                              .select('id');
+                            if (error) throw error;
+                            if (!data || data.length === 0) { showToast('Cannot unclaim this item', 'error'); return; }
+                            showToast('Unclaimed');
+                        }
+                        loadKidGifts(currentKidId);
+                    } catch (err) {
+                        console.error('claim/unclaim failed', err);
+                        showToast('Failed to update claim', 'error');
+                    }
+                });
+                kidsClaimBound = true;
+            }
         } catch (e) { console.error('Failed to load kid gifts', e); }
     }
 
