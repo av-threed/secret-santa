@@ -6,6 +6,30 @@
   <link rel="stylesheet" href="style.css">
   <script src="supabase.js" type="module"></script>
   <script src="sidebar.js" type="module"></script>
+  <style>
+    /* Dev-only: two-up grid layout in gift list modals */
+    #myGiftsList, #selectedKidGifts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      align-items: stretch;
+    }
+    @media (max-width: 700px) {
+      #myGiftsList, #selectedKidGifts { grid-template-columns: 1fr; }
+    }
+    /* Ensure cards fill their grid cell */
+    .gift-item { width: 100%; box-sizing: border-box; position: relative; padding-right: 96px; }
+    .gift-item .gift-item-actions { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); margin-left: 0 !important; }
+    .gift-item .btn-icon { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+
+    /* Widen gift list modals on dev page to use most of the content area */
+    #myGiftListModal .modal-content, #kidsGiftListModal .modal-content {
+      width: min(1200px, 95vw);
+      max-width: 95vw !important;
+      max-height: 90vh;
+      overflow: auto;
+    }
+  </style>
 </head>
 <body>
   <!-- Sidebar -->
@@ -275,7 +299,7 @@
   <!-- Dev-only script: Link submission mode for adultGiftForm -->
   <script type="module">
     import { supabase, addGiftToList, getCurrentUser, getMyGifts, addKidGift, getKidGifts, deleteKidGift } from './supabase.js';
-    import { showToast, confirmDialog } from './ui.js';
+    import { showToast, confirmDialog, editGiftDialog } from './ui.js';
 
     const adultForm = document.getElementById('adultGiftForm');
     const modeWrap = document.getElementById('devSubmissionMode');
@@ -562,6 +586,11 @@
                 </div>
               </a>
               <div class="gift-item-actions" style="margin-left:auto;">
+                <button class="btn-icon btn-edit-dev" aria-label="Edit gift" data-id="${g.id}">
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <path fill="currentColor" d="M5,18.5V21h2.5L17.81,10.69l-2.5-2.5L5,18.5M20.71,7.04c.39-.39.39-1.02,0-1.41l-2.34-2.34a1,1,0,0,0-1.41,0l-1.83,1.83l2.5,2.5l1.83-1.83z" />
+                  </svg>
+                </button>
                 <button class="btn-icon btn-delete-dev" aria-label="Delete gift" data-id="${g.id}">
                   <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                     <path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
@@ -578,6 +607,9 @@
               <h3 style="overflow-wrap:anywhere; word-break:break-word;">${g.name}</h3>
             </div>
             <div class="gift-item-actions" style="margin-left:auto;">
+              <button class="btn-icon btn-edit-dev" aria-label="Edit gift" data-id="${g.id}">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M5,18.5V21h2.5L17.81,10.69l-2.5-2.5L5,18.5M20.71,7.04c.39-.39.39-1.02,0-1.41l-2.34-2.34a1,1,0,0,0-1.41,0l-1.83,1.83l2.5,2.5l1.83-1.83z"/></svg>
+              </button>
               <button class="btn-icon btn-delete-dev" aria-label="Delete gift" data-id="${g.id}">
                 <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                   <path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
@@ -606,6 +638,38 @@
           }
         });
       });
+
+      // Edit buttons for adults (in-app modal)
+      myGiftsList.querySelectorAll('.btn-edit-dev').forEach(btn => {
+        btn.addEventListener('click', async (ev) => {
+          ev.preventDefault(); ev.stopPropagation();
+          const id = btn.getAttribute('data-id');
+          const card = btn.closest('.gift-item');
+          const titleEl = card?.querySelector('.gift-item-info h3');
+          const currentName = (titleEl?.textContent || '').trim();
+          const currentLink = card?.querySelector('a[href]')?.getAttribute('href') || '';
+          const res = await editGiftDialog({ title: 'Edit gift', initialName: currentName, initialLink: currentLink });
+          if (!res) return;
+          const newName = res.name || currentName;
+          const newLink = res.link || '';
+          try {
+            if (id && id.startsWith('local-')) {
+              const oldName = id.slice('local-'.length);
+              const arr = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]');
+              const idx = arr.indexOf(oldName);
+              const display = newLink ? `${newName} (${newLink})` : newName;
+              if (idx >= 0) arr[idx] = display;
+              localStorage.setItem('my_gift_ideas', JSON.stringify(arr));
+              setTimeout(loadMyGiftsDev, 50);
+              return;
+            }
+            if (window.deleteGift) await window.deleteGift(id);
+            const payload = newLink ? { name: newName, link: newLink } : { name: newName };
+            await (await import('./supabase.js')).addGiftToList(payload);
+            setTimeout(loadMyGiftsDev, 150);
+          } catch (e) { console.error('adult edit failed', e); }
+        });
+      });
     }
 
     // --- Dev-only Kids list rendering with link cards ---
@@ -613,12 +677,23 @@
       const name = String(g?.name || '');
       let link = null;
       const cap = name.replace(/\s*\((https?:[^)]+)\)\s*$/i, (m, u) => { link = u; return ''; }).trim();
-      return { id: g.id, name: cap || name, link };
+      return { id: g.id, name: cap || name, link, claimed_by: g.claimed_by || null, claimed_at: g.claimed_at || null };
     }
 
     let isRenderingKidsDev = false;
     let kidsObserver = null;
     function localKeyForKid(kidId) { return `kid_gifts_local:${kidId}`; }
+    function localClaimKeyForKid(kidId) { return `kid_gifts_claims:${kidId}`; }
+    function getLocalClaimSet(kidId) {
+      try {
+        const key = localClaimKeyForKid(kidId);
+        const arr = JSON.parse(localStorage.getItem(key) || '[]');
+        return new Set(arr);
+      } catch { return new Set(); }
+    }
+    function saveLocalClaimSet(kidId, set) {
+      try { localStorage.setItem(localClaimKeyForKid(kidId), JSON.stringify(Array.from(set))); } catch {}
+    }
     function upsertLocalKidGift(kidId, name) {
       try {
         const key = localKeyForKid(kidId);
@@ -631,7 +706,13 @@
       try {
         const key = localKeyForKid(kidId);
         const arr = JSON.parse(localStorage.getItem(key) || '[]');
-        return arr.map(n => ({ id: `local-kid-${kidId}-${encodeURIComponent(String(n))}`, name: String(n), link: (String(n).match(/\((https?:[^)]+)\)$/i)||[])[1] || null }));
+        const claims = getLocalClaimSet(kidId);
+        return arr.map(n => {
+          const raw = String(n);
+          const link = (raw.match(/\((https?:[^)]+)\)$/i)||[])[1] || null;
+          const claimed_by = claims.has(raw) ? 'local' : null;
+          return { id: `local-kid-${kidId}-${encodeURIComponent(raw)}`, name: raw, link, claimed_by, local_key: raw };
+        });
       } catch { return []; }
     }
     function deleteLocalKidGift(kidId, name) {
@@ -640,6 +721,8 @@
         const arr = JSON.parse(localStorage.getItem(key) || '[]');
         const updated = arr.filter(x => x !== name);
         localStorage.setItem(key, JSON.stringify(updated));
+        const claims = getLocalClaimSet(kidId);
+        if (claims.has(name)) { claims.delete(name); saveLocalClaimSet(kidId, claims); }
       } catch {}
     }
 
@@ -650,7 +733,7 @@
       try {
         const list = await getKidGifts(kidId);
         const items = [ ...(list || []).map(parseKidGift), ...getLocalKidGifts(kidId) ];
-        renderKidGiftsDev(items, kidId);
+        await renderKidGiftsDev(items, kidId);
       } catch {
         renderKidGiftsDev(getLocalKidGifts(kidId), kidId);
       }
@@ -661,7 +744,9 @@
       isRenderingKidsDev = false;
     }
 
-    function renderKidGiftsDev(items, kidId) {
+    async function renderKidGiftsDev(items, kidId) {
+      let myId = null;
+      try { const u = await getCurrentUser(); myId = u?.id || null; } catch {}
       selectedKidGifts.innerHTML = '';
       if (!items || items.length === 0) {
         selectedKidGifts.innerHTML = '<p class="no-gifts-message">No suggestions yet.</p>';
@@ -671,25 +756,32 @@
         const hasLink = !!it.link;
         const container = document.createElement('div');
         container.className = `gift-item ${hasLink ? 'link-card' : 'compact'}`;
+        const isClaimed = !!it.claimed_by;
+        const isMine = isClaimed && myId && String(it.claimed_by) === String(myId);
         if (hasLink) {
           const dom = domainFromUrl(it.link);
           container.innerHTML = `
-            <div style=\"display:flex; gap:12px; align-items:center; width:100%;\">
-              <a href=\"${it.link}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;\">
-                <div style=\"flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;\">
-                  <img class=\"dev-kid-preview-img\" src=\"https://www.google.com/s2/favicons?domain=${dom}&sz=64\" alt=\"${dom}\" width=\"24\" height=\"24\" loading=\"lazy\">
+            <div style="display:flex; gap:12px; align-items:center; width:100%;">
+              <a href="${it.link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">
+                <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                  <img class="dev-kid-preview-img" src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">
                 </div>
-                <div class=\"gift-item-info\" style=\"flex:1 1 auto; min-width:0;\">
-                  <h3 class=\"dev-kid-title\" style=\"margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;\">${it.name || '(Link)'}<\/h3>
-                  <p class=\"gift-link\" style=\"margin:0; color:#4b5563; font-size:13px;\">${dom} ↗<\/p>
+                <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">
+                  <h3 class="dev-kid-title" style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${it.name || '(Link)'}</h3>
+                  <p class="gift-link" style="margin:0; color:#4b5563; font-size:13px;">${dom} ↗</p>
                 </div>
               </a>
-              <div class=\"gift-item-actions\" style=\"margin-left:auto;\">
-                <button class=\"btn-icon btn-delete-kid-dev\" aria-label=\"Delete suggestion\" data-id=\"${it.id}\" data-kid=\"${kidId}\">\n                  <svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" aria-hidden=\"true\">\n                    <path fill=\"currentColor\" d=\"M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z\" />\n                  </svg>\n                </button>
+              <div class="gift-item-actions" style="margin-left:auto;">
+                ${!String(it.id).startsWith('local-kid-') ? (!isClaimed ? `<button class="btn-icon btn-claim-kid" aria-label="Claim" data-id="${it.id}" data-kid="${kidId}">🤝</button>` : (isMine ? `<button class="btn-icon btn-unclaim-kid" aria-label="Unclaim" data-id="${it.id}" data-kid="${kidId}">✖️</button>` : `<span style="font-size:12px;opacity:.7;">Claimed</span>`)) : ''}
+                <button class="btn-icon btn-edit-kid-dev" aria-label="Edit suggestion" data-id="${it.id}" data-kid="${kidId}"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M5,18.5V21h2.5L17.81,10.69l-2.5-2.5L5,18.5M20.71,7.04c.39-.39.39-1.02,0-1.41l-2.34-2.34a1,1,0,0,0-1.41,0l-1.83,1.83l2.5,2.5l1.83-1.83z"/></svg></button>
+                <button class="btn-icon btn-delete-kid-dev" aria-label="Delete suggestion" data-id="${it.id}" data-kid="${kidId}">
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+                  </svg>
+                </button>
               </div>
             </div>
           `;
-          // Enhance with preview
           (function(root){
             try {
               const titleEl = root.querySelector('.dev-kid-title');
@@ -699,38 +791,144 @@
           })(container);
         } else {
           container.innerHTML = `
-            <div class=\"gift-item-info\">\n              <h3>${it.name}<\/h3>\n            <\/div>\n            <div class=\"gift-item-actions\" style=\"margin-left:auto;\">\n              <button class=\"btn-icon btn-delete-kid-dev\" aria-label=\"Delete suggestion\" data-id=\"${it.id}\" data-kid=\"${kidId}\">\n                <svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" aria-hidden=\"true\">\n                  <path fill=\"currentColor\" d=\"M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z\" />\n                </svg>\n              </button>\n            <\/div>
+            <div class="gift-item-info">
+              <h3>${it.name}</h3>
+            </div>
+            <div class="gift-item-actions" style="margin-left:auto;">
+              ${!String(it.id).startsWith('local-kid-') ? (!isClaimed ? `<button class=\"btn-icon btn-claim-kid\" aria-label=\"Claim\" data-id=\"${it.id}\" data-kid=\"${kidId}\">🤝</button>` : (isMine ? `<button class=\"btn-icon btn-unclaim-kid\" aria-label=\"Unclaim\" data-id=\"${it.id}\" data-kid=\"${kidId}\">✖️</button>` : `<span style=\"font-size:12px;opacity:.7;\">Claimed</span>`)) : ''}
+              <button class="btn-icon btn-delete-kid-dev" aria-label="Delete suggestion" data-id="${it.id}" data-kid="${kidId}">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" />
+                </svg>
+              </button>
+            </div>
           `;
         }
         selectedKidGifts.appendChild(container);
       });
-
-      selectedKidGifts.querySelectorAll('.btn-delete-kid-dev').forEach(btn => {
-        btn.addEventListener('click', async (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          const id = btn.getAttribute('data-id');
-          const kidIdAttr = btn.getAttribute('data-kid');
-          const ok = await confirmDialog({ title: 'Delete Suggestion', message: 'Delete this suggestion?', confirmText: 'Delete' });
-          if (!ok) return;
-          try {
-            if (id && id.startsWith('local-kid-')) {
-              // ID format: local-kid-<kidId>-<encodeURIComponent(name)>
-              const prefix = `local-kid-${kidIdAttr}-`;
-              const nameEnc = id.startsWith(prefix) ? id.substring(prefix.length) : '';
-              const name = decodeURIComponent(nameEnc || '');
-              deleteLocalKidGift(kidIdAttr, name);
-              showToast('Deleted');
-              loadKidGiftsDev(kidIdAttr);
-            } else {
-              await deleteKidGift(id);
-              showToast('Deleted');
-              loadKidGiftsDev(kidIdAttr);
-            }
-          } catch (e) { showToast('Failed to delete', 'error'); }
-        });
-      });
     }
+
+    // Robust delegated handler for delete that also updates sidebar renderers
+    selectedKidGifts.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.btn-delete-kid-dev');
+      if (!btn) return;
+      e.preventDefault(); e.stopPropagation();
+      const id = btn.getAttribute('data-id');
+      const kidIdAttr = btn.getAttribute('data-kid') || kidSelectorInModal?.value || '';
+      const ok = await confirmDialog({ title: 'Delete Suggestion', message: 'Delete this suggestion?', confirmText: 'Delete' });
+      if (!ok) return;
+      try {
+        if (id && id.startsWith('local-kid-')) {
+          const prefix = `local-kid-${kidIdAttr}-`;
+          const nameEnc = id.startsWith(prefix) ? id.substring(prefix.length) : '';
+          const name = decodeURIComponent(nameEnc || '');
+          deleteLocalKidGift(kidIdAttr, name);
+        } else {
+          await deleteKidGift(id);
+        }
+        // Optimistically remove the card from DOM
+        const card = btn.closest('.gift-item');
+        if (card) card.remove();
+        // Notify any other renderers and refresh dev view
+        window.dispatchEvent(new CustomEvent('kid-gifts-updated', { detail: { kidId: kidIdAttr } }));
+        setTimeout(() => loadKidGiftsDev(kidIdAttr), 50);
+        showToast('Deleted');
+      } catch (e) {
+        console.error('Failed to delete kid gift', e);
+        showToast('Failed to delete', 'error');
+      }
+    });
+    selectedKidGifts.querySelectorAll('.btn-edit-kid-dev').forEach(btn => {
+      btn.addEventListener('click', async (ev) => {
+        ev.preventDefault(); ev.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        const kidIdAttr = btn.getAttribute('data-kid');
+        const card = btn.closest('.gift-item');
+        const titleEl = card?.querySelector('.gift-item-info h3');
+        const currentName = (titleEl?.textContent || '').trim();
+        const currentLink = card?.querySelector('a[href]')?.getAttribute('href') || '';
+        const res = await editGiftDialog({ title: 'Edit suggestion', initialName: currentName, initialLink: currentLink });
+        if (!res) return;
+        const newName = res.name || currentName;
+        const newLink = res.link || '';
+        try {
+          if (id && id.startsWith('local-kid-')) {
+            const prefix = `local-kid-${kidIdAttr}-`;
+            const nameEnc = id.startsWith(prefix) ? id.substring(prefix.length) : '';
+            const oldName = decodeURIComponent(nameEnc || '');
+            const key = `kid_gifts_local:${kidIdAttr}`;
+            const arr = JSON.parse(localStorage.getItem(key) || '[]');
+            const idx = arr.indexOf(oldName);
+            const display = newLink ? `${newName} (${newLink})` : newName;
+            if (idx >= 0) arr[idx] = display;
+            localStorage.setItem(key, JSON.stringify(arr));
+            setTimeout(() => loadKidGiftsDev(kidIdAttr), 50);
+            return;
+          }
+          // DB path: delete + insert to simulate update
+          await deleteKidGift(id);
+          await addKidGift(kidIdAttr, { name: newLink ? `${newName} (${newLink})` : newName });
+          setTimeout(() => loadKidGiftsDev(kidIdAttr), 150);
+        } catch (e) { console.error('edit kid failed', e); }
+      });
+    });
+
+    // Claim / Unclaim handlers
+    selectedKidGifts.addEventListener('click', async (e) => {
+      const claimBtn = e.target.closest('.btn-claim-kid');
+      const unclaimBtn = e.target.closest('.btn-unclaim-kid');
+      if (!claimBtn && !unclaimBtn) return;
+      e.preventDefault(); e.stopPropagation();
+      const user = await getCurrentUser().catch(() => null);
+      if (!user?.id) { showToast('Please sign in to claim', 'error'); return; }
+      const idAttr = (claimBtn || unclaimBtn).getAttribute('data-id');
+      const kidIdAttr = (claimBtn || unclaimBtn).getAttribute('data-kid');
+      try {
+        if (idAttr.startsWith('local-kid-')) {
+          // Offline local claim toggle based on stored name key
+          const nameEnc = idAttr.substring(idAttr.indexOf(kidIdAttr + '-') + (kidIdAttr + '-').length);
+          const rawName = decodeURIComponent(nameEnc);
+          const claims = getLocalClaimSet(kidIdAttr);
+          if (claimBtn) {
+            claims.add(rawName);
+            saveLocalClaimSet(kidIdAttr, claims);
+            showToast('Claimed (local)');
+          } else {
+            claims.delete(rawName);
+            saveLocalClaimSet(kidIdAttr, claims);
+            showToast('Unclaimed (local)');
+          }
+          setTimeout(() => loadKidGiftsDev(kidIdAttr), 50);
+          return;
+        }
+        // Online path requires auth
+        if (claimBtn) {
+          const { data, error } = await supabase
+            .from('kid_gifts')
+            .update({ claimed_by: user.id, claimed_at: new Date().toISOString() })
+            .eq('id', idAttr)
+            .is('claimed_by', null)
+            .select('id');
+          if (error) throw error;
+          if (!data || data.length === 0) { showToast('Already claimed', 'error'); return; }
+          showToast('Claimed');
+        } else {
+          const { data, error } = await supabase
+            .from('kid_gifts')
+            .update({ claimed_by: null, claimed_at: null })
+            .eq('id', idAttr)
+            .eq('claimed_by', user.id)
+            .select('id');
+          if (error) throw error;
+          if (!data || data.length === 0) { showToast('Cannot unclaim this item', 'error'); return; }
+          showToast('Unclaimed');
+        }
+        setTimeout(() => loadKidGiftsDev(kidIdAttr), 50);
+      } catch (err) {
+        console.error('claim/unclaim failed', err);
+        showToast('Failed to update claim', 'error');
+      }
+    });
 
     // Re-render when opening the modal and when gifts update
     myGiftListBtn?.addEventListener('click', () => {
