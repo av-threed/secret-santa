@@ -343,7 +343,32 @@
 
     // Kids submit: Link mode override
     kidsForm?.addEventListener('submit', async (e)=>{
-      if(getSelectedKidsMode()!=='link') return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.();
+      const mode = getSelectedKidsMode();
+      if(mode !== 'link') {
+        // Idea mode: if not signed in, save locally so you can test offline
+        try {
+          const user = await getCurrentUser().catch(()=>null);
+          if (user && user.id) return; // let app.js handle DB path
+        } catch {}
+        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.();
+        const kidId = childSelect?.value || '';
+        if (!kidId) { showToast('Select a child', 'error'); return; }
+        const raw = (kidsTextarea?.value || '').trim();
+        if (!raw) { showToast('Enter at least one idea', 'error'); return; }
+        const lines = raw.split('\n').map(s=>s.trim()).filter(Boolean);
+        try {
+          const key = localKeyForKid(kidId);
+          const arr = JSON.parse(localStorage.getItem(key) || '[]');
+          lines.forEach(line => { if (!arr.includes(line)) arr.push(line); });
+          localStorage.setItem(key, JSON.stringify(arr));
+          if (kidsTextarea) kidsTextarea.value = '';
+          showToast('Suggestions added (local)');
+          window.dispatchEvent(new CustomEvent('kid-gifts-updated',{detail:{kidId}}));
+        } catch(err){ console.error(err); showToast('Failed to save locally','error'); }
+        return;
+      }
+      // Link mode override
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.();
       const kidId = childSelect?.value || ''; if(!kidId){ showToast('Select a child', 'error'); return; }
       const rawUrl = (kidUrlInput?.value||'').trim(); if(!rawUrl){ showToast('Enter a product link', 'error'); return; }
       const normalized = normalizeUrl(rawUrl); if(!normalized){ showToast('Enter a valid http/https link', 'error'); return; }
