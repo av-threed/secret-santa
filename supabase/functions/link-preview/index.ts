@@ -14,7 +14,7 @@ type Preview = {
 // Allowlist localhost and a placeholder prod origin. Update with your live domain when ready.
 const ALLOWED_ORIGINS = new Set<string>([
   "http://localhost:8080",
-  // Add your live origin here, e.g.: "https://your-domain.com"
+  "https://frolicking-snickerdoodle-2a0250.netlify.app"
 ]);
 
 function ok(json: unknown, status = 200, req?: Request) {
