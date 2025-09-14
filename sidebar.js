@@ -341,20 +341,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (e) { showToast('Failed to delete', 'error'); }
             });
 
-            // Delegated claim/unclaim (local only here; DB claims are handled on dev page / future)
+            // Delegated claim/unclaim (local + DB)
             selectedKidGifts.addEventListener('click', async (ev) => {
                 const claim = ev.target.closest('.btn-claim-kid');
                 const unclaim = ev.target.closest('.btn-unclaim-kid');
                 if (!claim && !unclaim) return;
                 const idAttr = (claim || unclaim).getAttribute('data-id');
-                if (!idAttr.startsWith('local-kid-')) return; // skip DB here
-                const enc = idAttr.substring(idAttr.indexOf(kidId + '-') + (kidId + '-').length);
-                const raw = decodeURIComponent(enc);
-                const set = getLocalClaimSet(kidId);
-                if (claim) { set.add(raw); showToast('Claimed (local)'); }
-                else { set.delete(raw); showToast('Unclaimed (local)'); }
-                saveLocalClaimSet(kidId, set);
-                loadKidGifts(kidId);
+                if (idAttr.startsWith('local-kid-')) {
+                    const enc = idAttr.substring(idAttr.indexOf(kidId + '-') + (kidId + '-').length);
+                    const raw = decodeURIComponent(enc);
+                    const set = getLocalClaimSet(kidId);
+                    if (claim) { set.add(raw); showToast('Claimed (local)'); }
+                    else { set.delete(raw); showToast('Unclaimed (local)'); }
+                    saveLocalClaimSet(kidId, set);
+                    loadKidGifts(kidId);
+                    return;
+                }
+
+                // DB-backed claim/unclaim requires auth
+                try {
+                    const { supabase } = await import('./supabase.js');
+                    const { data: userData } = await supabase.auth.getUser();
+                    const me = userData?.user?.id;
+                    if (!me) { showToast('Sign in to claim', 'error'); return; }
+                    if (claim) {
+                        const { data, error } = await supabase
+                          .from('kid_gifts')
+                          .update({ claimed_by: me, claimed_at: new Date().toISOString() })
+                          .eq('id', idAttr)
+                          .is('claimed_by', null)
+                          .select('id');
+                        if (error) throw error;
+                        if (!data || data.length === 0) { showToast('Already claimed', 'error'); return; }
+                        showToast('Claimed');
+                    } else {
+                        const { data, error } = await supabase
+                          .from('kid_gifts')
+                          .update({ claimed_by: null, claimed_at: null })
+                          .eq('id', idAttr)
+                          .eq('claimed_by', me)
+                          .select('id');
+                        if (error) throw error;
+                        if (!data || data.length === 0) { showToast('Cannot unclaim this item', 'error'); return; }
+                        showToast('Unclaimed');
+                    }
+                    loadKidGifts(kidId);
+                } catch (err) {
+                    console.error('claim/unclaim failed', err);
+                    showToast('Failed to update claim', 'error');
+                }
             });
         } catch (e) { console.error('Failed to load kid gifts', e); }
     }
