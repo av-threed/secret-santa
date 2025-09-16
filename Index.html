@@ -21,9 +21,9 @@
     .gift-item { width: 100%; box-sizing: border-box; position: relative; padding-right: 96px; }
     .gift-item .gift-item-actions { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); margin-left: 0 !important; }
     .gift-item .btn-icon { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; }
-    /* Widen gift list modals */
-    #myGiftListModal .modal-content, #kidsGiftListModal .modal-content { width: min(1200px, 95vw); max-width: 95vw; max-height: 90vh; overflow: auto; }
   </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
 </head>
 <body>
   <!-- Sidebar -->
@@ -84,6 +84,107 @@
       Sign Out
     </button>
   </aside>
+  
+  <!-- Modals (placed at body level to ensure full-viewport coverage) -->
+  <!-- My Gift List Modal -->
+  <div id="myGiftListModal" class="modal modal--wide">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>My Gift List</h2>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addGiftForm" class="gift-form">
+          <input type="text" id="giftName" placeholder="Gift name" required>
+          <input type="text" id="giftPrice" placeholder="Price (optional)">
+          <input type="url" id="giftLink" placeholder="Link to gift (optional)">
+          <textarea id="giftNotes" placeholder="Notes (optional)"></textarea>
+          <button type="submit" class="btn-primary">Add Gift</button>
+        </form>
+        <div id="myGiftsList" class="gifts-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kids Gift List Modal -->
+  <div id="kidsGiftListModal" class="modal modal--wide">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Kids Gift Lists</h2>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="kidSelector">Which child are these for?</label>
+          <select id="kidSelector">
+            <option value="">Select a child...</option>
+          </select>
+        </div>
+        <div id="selectedKidGifts" class="gifts-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recipient Gifts Modal -->
+  <div id="recipientGiftsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="recipientHeader">Recipient's Gift Ideas</h2>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="recipientGiftsList" class="gifts-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Set Recipient Modal -->
+  <div id="setRecipientModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Set Recipient</h2>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="recipientStatus" class="helper-text"></div>
+        <div class="form-group">
+          <label for="recipientSelect">Choose recipient:</label>
+          <select id="recipientSelect">
+            <option value="">Select a person...</option>
+          </select>
+        </div>
+        <button id="saveRecipientBtn" class="btn-primary">Save Recipient</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="settingsForm" class="settings-form">
+          <label class="setting-item">
+            <input type="checkbox" id="settingPinSidebar">
+            Pin sidebar by default
+          </label>
+          <div class="setting-item">
+            <label for="settingTheme" style="margin: 0;">Theme</label>
+            <select id="settingTheme">
+              <option value="system">System theme</option>
+              <option value="light">Light theme</option>
+              <option value="dark">Dark theme</option>
+            </select>
+          </div>
+          <div class="helper-text">These settings are saved on this device.</div>
+          <button type="submit" class="btn-primary" style="margin-top:10px;">Save Settings</button>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <!-- Main Content -->
   <main class="main-content">
@@ -92,102 +193,8 @@
       <span id="welcomeMessage"></span>
     </div>
 
-    <!-- My Gift List Modal -->
-    <div id="myGiftListModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>My Gift List</h2>
-          <button class="modal-close">&times;</button>
-        </div>
-        <div class="modal-body">
-          <form id="addGiftForm" class="gift-form">
-            <input type="text" id="giftName" placeholder="Gift name" required>
-            <input type="text" id="giftPrice" placeholder="Price (optional)">
-            <input type="text" id="giftLink" placeholder="Link to gift (optional)">
-            <textarea id="giftNotes" placeholder="Notes (optional)"></textarea>
-            <button type="submit" class="btn-primary">Add Gift</button>
-          </form>
-          <div id="myGiftsList" class="gifts-list"></div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Kids Gift List Modal -->
-    <div id="kidsGiftListModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Kids Gift Lists</h2>
-          <button class="modal-close">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="kids-selector">
-            <select id="kidSelector" class="kid-select">
-              <option value="">Select a child...</option>
-            </select>
-          </div>
-          <div id="selectedKidGifts" class="gifts-list"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Recipient Gifts Modal -->
-    <div id="recipientGiftsModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Recipient's Gift Ideas</h2>
-          <button class="modal-close">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div id="recipientHeader" class="helper-text" style="margin-bottom:12px;"></div>
-          <div id="recipientGiftsList" class="gifts-list"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Set Recipient Modal -->
-    <div id="setRecipientModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Choose Your Recipient</h2>
-          <button class="modal-close">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div id="recipientStatus" class="helper-text" style="margin-bottom:12px;"></div>
-          <select id="recipientSelect"></select>
-          <button id="saveRecipientBtn" class="btn-primary" style="margin-top:10px;">Save Recipient</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Settings</h2>
-          <button class="modal-close">&times;</button>
-        </div>
-        <div class="modal-body">
-          <form id="settingsForm" class="settings-form">
-            <label class="setting-item">
-              <input type="checkbox" id="settingPinSidebar">
-              Pin sidebar by default
-            </label>
-            <div class="setting-item">
-              <label for="settingTheme" style="margin: 0;">Theme</label>
-              <select id="settingTheme">
-                <option value="system">System theme</option>
-                <option value="light">Light theme</option>
-                <option value="dark">Dark theme</option>
-              </select>
-            </div>
-            <div class="helper-text">These settings are saved on this device.</div>
-            <button type="submit" class="btn-primary" style="margin-top:10px;">Save Settings</button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div class="main-forms-container">
+  <div class="main-forms-container">
     <!-- Adult Gift Form -->
     <form id="adultGiftForm" class="gift-form adult-form">
       <h3 class="form-title">Your Gift Ideas</h3>

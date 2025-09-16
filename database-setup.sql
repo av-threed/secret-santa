@@ -40,7 +40,10 @@ create table kid_gifts (
     name text not null,
     price text,
     link text,
-    notes text
+    notes text,
+    -- Claiming support
+    claimed_by uuid references auth.users,
+    claimed_at timestamp with time zone
 );
 
 -- Prevent duplicate suggestions per kid by name (case-insensitive)
@@ -83,12 +86,44 @@ create policy "Authenticated users can read gifts"
     on gifts for select
     using (auth.role() = 'authenticated');
 
+-- Helpful indexes
+create index if not exists kid_gifts_kid_id_idx on kid_gifts (kid_id);
+create index if not exists kid_gifts_claimed_by_idx on kid_gifts (claimed_by);
+
 -- Policies for kid_gifts table
+-- 1) Anyone (even anon) can read suggestions
 create policy "Anyone can read kid gifts"
     on kid_gifts for select
     using (true);
 
-create policy "Authenticated users can manage kid gifts"
-    on kid_gifts for all
+-- 2) Creators can insert/update/delete their own suggestions (full control)
+create policy "Creators manage their kid gifts"
+    on kid_gifts for insert
+    with check (auth.uid() = created_by);
+
+create policy "Creators update their kid gifts"
+    on kid_gifts for update
+    using (auth.uid() = created_by)
+    with check (auth.uid() = created_by);
+
+create policy "Creators delete their kid gifts"
+    on kid_gifts for delete
     using (auth.uid() = created_by);
+
+-- 3) Any authenticated user can claim an unclaimed suggestion
+-- USING sees the row before update; WITH CHECK validates the new row
+create policy "Authenticated users can claim kid gifts"
+    on kid_gifts for update to authenticated
+    using (claimed_by is null)
+    with check (claimed_by = auth.uid());
+
+-- 4) The current claimer can unclaim their own claim
+create policy "Authenticated users can unclaim their kid gift"
+    on kid_gifts for update to authenticated
+    using (claimed_by = auth.uid())
+    with check (claimed_by is null);
+
+-- Note: The two claim/unclaim policies above intentionally allow updates only
+-- when transitioning between null <-> auth.uid(). Application code should only
+-- modify the claim fields during these operations.
    

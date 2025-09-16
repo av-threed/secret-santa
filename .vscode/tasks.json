@@ -13,6 +13,18 @@
 			"isBackground": true,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "Start Local Dev Server",
+			"type": "shell",
+			"command": "python3",
+			"args": [
+				"-m",
+				"http.server",
+				"8000"
+			],
+			"isBackground": true,
+			"group": "build"
 		}
 	]
 }
