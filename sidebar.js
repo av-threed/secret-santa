@@ -442,7 +442,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isLocal = String(g.id).startsWith('local-kid-');
                 const isClaimed = !!g.claimed_by;
                 const isMine = isClaimed && me && String(g.claimed_by) === String(me);
-                if (onlyUnclaimed && isClaimed && !isMine && !isLocal) return; // skip
+                // When filtering for only unclaimed, exclude all claimed items (including mine or local)
+                if (onlyUnclaimed && isClaimed) return; // skip any claimed items
                 let itemStateClass = 'gift-unclaimed';
                 if (isClaimed && isMine) itemStateClass = 'gift-claimed-mine';
                 else if (isClaimed) itemStateClass = 'gift-claimed-other';
@@ -452,8 +453,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     // try to show claimer name (best effort, we might not have it in g)
                     // attempt to parse joined profile if present: g.profiles?.full_name
                     const full = g.profiles?.full_name || g.full_name || '';
-                    const shortened = full ? full.split(/\s+/).slice(0,2).map(p=>p[0].toUpperCase()+p.slice(1,1)).join(' ') : 'Someone';
-                    claimerLabel = `<span class=\"claimer-badge other\" title=\"${full || 'Claimed by another user'}\">${shortened || 'Claimed'}</span>`;
+                    const shortened = full ? full.split(/\s+/).slice(0,2).map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(' ') : 'Someone';
+                    claimerLabel = `<span class=\"claimer-badge other\" title=\"${full || 'Claimed by another user'}\">${shortened || 'Claimed'}<\/span>`;
                 } else if (!isLocal && isMine) {
                     claimerLabel = `<span class=\"claimer-badge\" title=\"You claimed this\">You</span>`;
                 } else if (isLocal && isClaimed) {
@@ -550,7 +551,6 @@ document.addEventListener('DOMContentLoaded', () => {
                           .from('kid_gifts')
                           .update({ claimed_by: null, claimed_at: null })
                           .eq('id', idAttr)
-                          .eq('claimed_by', me)
                           .select('id');
                         if (error) throw error;
                         if (!data || data.length === 0) { showToast('Cannot unclaim (not yours)', 'error'); return false; }
