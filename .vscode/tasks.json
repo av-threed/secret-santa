@@ -25,6 +25,17 @@
 			],
 			"isBackground": true,
 			"group": "build"
+		},
+		{
+			"label": "Git Rebase Main",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"status",
+				"--porcelain=v1",
+				"-b"
+			],
+			"group": "build"
 		}
 	]
 }
