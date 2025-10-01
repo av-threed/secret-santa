@@ -34,6 +34,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const badgeKids = document.getElementById('badgeKids');
     let currentModal = null;
 
+    // Multi-select controls (My Gifts)
+    const multiSelectToggle = document.getElementById('multiSelectToggle');
+    const multiSelectActions = document.getElementById('multiSelectActions');
+    const multiSelectCount = document.getElementById('multiSelectCount');
+    const multiDeleteBtn = document.getElementById('multiDeleteBtn');
+    const multiCancelBtn = document.getElementById('multiCancelBtn');
+    let multiSelectMode = false;
+    const selectedMyGiftIds = new Set();
+
+    // SVG icon helpers for claim / unclaim (inline for portability)
+    function claimSvg() {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5 11-11"/><path d="M2 12l5 5" opacity=".35"/></svg>';
+    }
+    function unclaimSvg() {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>';
+    }
+
+    function editSvg() {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9" opacity=".35"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    }
+    function deleteSvg() {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2" opacity=".55"/><path d="M10 11v6M14 11v6"/><rect x="5" y="6" width="14" height="14" rx="2" ry="2"/></svg>';
+    }
+
     // --- Helpers shared with dev page ---
     function domainFromUrl(href) {
         try { return new URL(href).hostname.replace(/^www\./, ''); } catch { return ''; }
@@ -170,12 +194,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const link = gift.link || extractLinkFromName(gift.name);
             const hasLink = !!link;
             giftElement.className = `gift-item ${hasLink ? 'link-card' : 'compact'}`;
-            if (hasLink) {
+            if (multiSelectMode) giftElement.classList.add('multi-selectable');
+                        if (hasLink) {
                 const dom = domainFromUrl(link);
                 const titleText = String(gift.name||'').replace(/\s*\((https?:[^)]+)\)\s*$/i,'').trim() || '(Link)';
-                giftElement.innerHTML = `
+                                giftElement.innerHTML = `
                     <div style="display:flex; gap:12px; align-items:center; width:100%;">
-                      <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">
+                                            <a ${multiSelectMode ? '' : `href="${link}" target="_blank" rel="noopener noreferrer"`} style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0; ${multiSelectMode ? 'pointer-events:none; user-select:none;' : ''}">
                         <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                           <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">
                         </div>
@@ -185,8 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                       </a>
                       <div class="gift-item-actions" style="margin-left:auto;">
-                        <button class="btn-icon btn-edit-my" aria-label="Edit gift" data-id="${gift.id}">✎</button>
-                        <button class="btn-icon" aria-label="Delete gift" onclick="deleteGift('${gift.id}')">🗑️</button>
+                        <button class="btn-icon btn-edit-my" aria-label="Edit gift" data-id="${gift.id}">${editSvg()}</button>
+                                                    <button class="btn-icon" aria-label="Delete gift" onclick="deleteGift('${gift.id}')">${deleteSvg()}</button>
                       </div>
                     </div>`;
             } else {
@@ -195,15 +220,34 @@ document.addEventListener('DOMContentLoaded', () => {
                       <h3 style="overflow-wrap:anywhere; word-break:break-word;">${gift.name}</h3>
                     </div>
                     <div class="gift-item-actions">
-                      <button class="btn-icon btn-edit-my" aria-label="Edit gift" data-id="${gift.id}">✎</button>
-                      <button class="btn-icon" aria-label="Delete gift" onclick="deleteGift('${gift.id}')">🗑️</button>
+                      <button class="btn-icon btn-edit-my" aria-label="Edit gift" data-id="${gift.id}">${editSvg()}</button>
+                                                <button class="btn-icon" aria-label="Delete gift" onclick="deleteGift('${gift.id}')">${deleteSvg()}</button>
                     </div>`;
+            }
+            if (multiSelectMode) {
+                const box = document.createElement('span');
+                box.className = 'multi-select-checkbox';
+                const idStr = String(gift.id);
+                if (selectedMyGiftIds.has(idStr)) {
+                    giftElement.dataset.selected = 'true';
+                    box.textContent = '✓';
+                }
+                giftElement.prepend(box);
+                giftElement.tabIndex = 0;
+                giftElement.addEventListener('click', (ev) => {
+                    if (ev.target.closest('.gift-item-actions')) return;
+                    toggleGiftSelection(idStr, giftElement);
+                }, { capture: true });
+                giftElement.addEventListener('keydown', (ev) => {
+                    if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); toggleGiftSelection(idStr, giftElement); }
+                });
             }
             myGiftsList.appendChild(giftElement);
         });
 
         // Edit buttons
-        myGiftsList.querySelectorAll('.btn-edit-my').forEach(btn => {
+        if (!multiSelectMode) {
+          myGiftsList.querySelectorAll('.btn-edit-my').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const id = btn.getAttribute('data-id');
                 const card = btn.closest('.gift-item');
@@ -232,8 +276,73 @@ document.addEventListener('DOMContentLoaded', () => {
                     loadMyGifts();
                 } catch (e) { showToast('Failed to edit gift', 'error'); }
             });
-        });
+          });
+        }
     }
+
+    function toggleGiftSelection(idStr, el) {
+        if (!multiSelectMode) return;
+        if (selectedMyGiftIds.has(idStr)) {
+            selectedMyGiftIds.delete(idStr);
+            el.removeAttribute('data-selected');
+            const box = el.querySelector('.multi-select-checkbox'); if (box) box.textContent='';
+        } else {
+            selectedMyGiftIds.add(idStr);
+            el.dataset.selected='true';
+            const box = el.querySelector('.multi-select-checkbox'); if (box) box.textContent='✓';
+        }
+        updateMultiSelectBar();
+    }
+
+    function updateMultiSelectBar() {
+        if (!multiSelectActions || !multiSelectToggle) return;
+        if (multiSelectMode) {
+            multiSelectActions.style.display='inline-flex';
+            multiSelectToggle.style.display='none';
+            document.body.classList.add('multi-select-mode');
+        } else {
+            multiSelectActions.style.display='none';
+            multiSelectToggle.style.display='inline-block';
+            document.body.classList.remove('multi-select-mode');
+        }
+        if (multiSelectCount) multiSelectCount.textContent = `${selectedMyGiftIds.size} selected`;
+    }
+
+    multiSelectToggle?.addEventListener('click', () => {
+        multiSelectMode = true;
+        selectedMyGiftIds.clear();
+        updateMultiSelectBar();
+        loadMyGifts();
+    });
+    multiCancelBtn?.addEventListener('click', () => {
+        multiSelectMode = false;
+        selectedMyGiftIds.clear();
+        updateMultiSelectBar();
+        loadMyGifts();
+    });
+    multiDeleteBtn?.addEventListener('click', async () => {
+        if (!selectedMyGiftIds.size) { showToast('No gifts selected', 'error'); return; }
+        const ok = await confirmDialog({ title: 'Delete Gifts', message: `Delete ${selectedMyGiftIds.size} selected gift(s)?`, confirmText: 'Delete' });
+        if (!ok) return;
+        let failures = 0;
+        for (const id of Array.from(selectedMyGiftIds)) {
+            try {
+                if (id.startsWith('local-')) {
+                    const name = id.slice('local-'.length);
+                    const stored = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]');
+                    const idx = stored.indexOf(name);
+                    if (idx >= 0) { stored.splice(idx,1); localStorage.setItem('my_gift_ideas', JSON.stringify(stored)); }
+                } else {
+                    await deleteGift(id);
+                }
+            } catch { failures++; }
+        }
+        if (failures) showToast(`Deleted with ${failures} error(s)`, 'error'); else showToast('Deleted selected');
+        multiSelectMode = false;
+        selectedMyGiftIds.clear();
+        updateMultiSelectBar();
+        loadMyGifts();
+    });
 
     async function loadRecipientGifts() {
         recipientGiftsList.innerHTML = '';
@@ -301,10 +410,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!kidId) { selectedKidGifts.innerHTML = ''; return; }
         try {
             // Determine current user id for claim ownership
-            let me = null; try { const { supabase } = await import('./supabase.js'); const { data: userData } = await supabase.auth.getUser(); me = userData?.user?.id || null; } catch {}
-            const giftsDb = await getKidGifts(kidId);
-            const gifts = [ ...(giftsDb || []), ...getLocalKidGifts(kidId) ];
+            let me = null; let myProfileName = '';
+            try {
+                const { supabase } = await import('./supabase.js');
+                const { data: userData } = await supabase.auth.getUser();
+                me = userData?.user?.id || null;
+                if (me) {
+                    try { const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', me).single(); myProfileName = prof?.full_name || ''; } catch {}
+                }
+            } catch {}
+            const giftsDb = await getKidGifts(kidId); // includes potential claimed_by
+            const gifts = [ ...(giftsDb || []), ...getLocalKidGifts(kidId) ]; // merge local offline
             selectedKidGifts.innerHTML = '';
+            // Insert filter toggle once (unclaimed filter)
+            if (!document.getElementById('unclaimedFilterToggle')) {
+                const filterWrap = document.createElement('div');
+                filterWrap.className = 'unclaimed-filter-toggle';
+                filterWrap.innerHTML = `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">\n                  <input id="unclaimedFilterToggle" type="checkbox" />\n                  <span>Show only unclaimed</span>\n                </label>`;
+                selectedKidGifts.parentElement?.insertBefore(filterWrap, selectedKidGifts);
+                filterWrap.addEventListener('change', () => loadKidGifts(kidId));
+            }
+            const onlyUnclaimed = !!document.getElementById('unclaimedFilterToggle')?.checked;
             if (!gifts || gifts.length === 0) {
                 selectedKidGifts.innerHTML = '<p class="no-gifts-message">No suggestions yet.</p>';
                 return;
@@ -316,18 +442,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isLocal = String(g.id).startsWith('local-kid-');
                 const isClaimed = !!g.claimed_by;
                 const isMine = isClaimed && me && String(g.claimed_by) === String(me);
-                el.className = `gift-item ${hasLink ? 'link-card' : 'compact'}`;
-                const claimControls = isLocal
-                  ? (!isClaimed ? `<button class=\"btn-icon btn-claim-kid\" data-id=\"${g.id}\" data-kid=\"${kidId}\">🤝</button>` : `<button class=\"btn-icon btn-unclaim-kid\" data-id=\"${g.id}\" data-kid=\"${kidId}\">✖️</button>`)
-                  : (!isClaimed ? `<button class=\"btn-icon btn-claim-kid\" data-id=\"${g.id}\" data-kid=\"${kidId}\">🤝</button>` : (isMine ? `<button class=\"btn-icon btn-unclaim-kid\" data-id=\"${g.id}\" data-kid=\"${kidId}\">✖️</button>` : `<span style=\"font-size:12px;opacity:.7;\">Claimed</span>`));
+                if (onlyUnclaimed && isClaimed && !isMine && !isLocal) return; // skip
+                let itemStateClass = 'gift-unclaimed';
+                if (isClaimed && isMine) itemStateClass = 'gift-claimed-mine';
+                else if (isClaimed) itemStateClass = 'gift-claimed-other';
+                el.className = `gift-item ${itemStateClass} ${hasLink ? 'link-card' : 'compact'}`;
+                let claimerLabel = '';
+                if (!isLocal && isClaimed && !isMine) {
+                    // try to show claimer name (best effort, we might not have it in g)
+                    // attempt to parse joined profile if present: g.profiles?.full_name
+                    const full = g.profiles?.full_name || g.full_name || '';
+                    const shortened = full ? full.split(/\s+/).slice(0,2).map(p=>p[0].toUpperCase()+p.slice(1,1)).join(' ') : 'Someone';
+                    claimerLabel = `<span class=\"claimer-badge other\" title=\"${full || 'Claimed by another user'}\">${shortened || 'Claimed'}</span>`;
+                } else if (!isLocal && isMine) {
+                    claimerLabel = `<span class=\"claimer-badge\" title=\"You claimed this\">You</span>`;
+                } else if (isLocal && isClaimed) {
+                    claimerLabel = `<span class=\"claimer-badge\" title=\"Local only claim (not synced)\">Local</span>`;
+                }
+                const actionHtml = (() => {
+                    if (isLocal) {
+                        return !isClaimed
+                          ? `<button class="btn-icon btn-claim-kid claim-btn" aria-label="Claim gift: ${g.name}" data-id="${g.id}" data-kid="${kidId}">${claimSvg()}</button>`
+                          : `<button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${kidId}">${unclaimSvg()}</button>`;
+                    }
+                    if (!isClaimed) {
+                        return `<button class="btn-icon btn-claim-kid claim-btn" aria-label="Claim gift: ${g.name}" data-id="${g.id}" data-kid="${kidId}">${claimSvg()}</button>`;
+                    }
+                    if (isMine) {
+                        return `<button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${kidId}">${unclaimSvg()}</button>`;
+                    }
+                    return `<span class="claim-status-text" role="status">${claimerLabel || 'Claimed'}</span>`;
+                })();
                 if (hasLink) {
                     const dom = domainFromUrl(link);
                     const titleText = String(g.name||'').replace(/\s*\((https?:[^)]+)\)\s*$/i,'').trim() || '(Link)';
                     el.innerHTML = `
-                    <div style=\"display:flex; gap:12px; align-items:center; width:100%;\">\n                      <a href=\"${link}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;\">\n                        <div style=\"flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;\">\n                          <img src=\"https://www.google.com/s2/favicons?domain=${dom}&sz=64\" alt=\"${dom}\" width=\"24\" height=\"24\" loading=\"lazy\">\n                        </div>\n                        <div class=\"gift-item-info\" style=\"flex:1 1 auto; min-width:0;\">\n                          <h3 style=\"margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;\">${titleText}<\/h3>\n                          <p class=\"gift-link\" style=\"margin:0; color:#4b5563; font-size:13px;\">${dom} ↗<\/p>\n                        <\/div>\n                      <\/a>\n                      <div class=\"gift-item-actions\" style=\"margin-left:auto;\">\n                        ${claimControls}\n                        <button class=\"btn-icon btn-delete-kid-dev\" aria-label=\"Delete suggestion\" data-id=\"${g.id}\" data-kid=\"${kidId}\">🗑️<\/button>\n                      <\/div>\n                    <\/div>`;
+                    <div style="display:flex; gap:12px; align-items:center; width:100%;">\n                      <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">\n                        <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">\n                          <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">\n                        </div>\n                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">\n                          <h3 style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${titleText}<\/h3>\n                          <p class="gift-link" style="margin:0; color:#4b5563; font-size:13px;">${dom} ↗<\/p>\n                        <\/div>\n                      <\/a>\n                      <div class="gift-item-actions" style="margin-left:auto;">\n                        ${claimerLabel && !isMine ? claimerLabel : ''}\n                        ${actionHtml}\n                        <button class="btn-icon btn-delete-kid-dev" aria-label="Delete suggestion" data-id="${g.id}" data-kid="${kidId}">${deleteSvg()}<\/button>\n                      <\/div>\n                    <\/div>`;
                 } else {
                     el.innerHTML = `
-                      <div class=\"gift-item-info\">\n                        <h3>${g.name}<\/h3>\n                      <\/div>\n                      <div class=\"gift-item-actions\" style=\"margin-left:auto;\">\n                        ${claimControls}\n                        <button class=\"btn-icon btn-delete-kid-dev\" aria-label=\"Delete suggestion\" data-id=\"${g.id}\" data-kid=\"${kidId}\">🗑️<\/button>\n                      <\/div>`;
+                      <div class="gift-item-info">\n                        <h3>${g.name}<\/h3>\n                      <\/div>\n                      <div class="gift-item-actions" style="margin-left:auto;">\n                        ${claimerLabel && !isMine ? claimerLabel : ''}\n                        ${actionHtml}\n                        <button class="btn-icon btn-delete-kid-dev" aria-label="Delete suggestion" data-id="${g.id}" data-kid="${kidId}">${deleteSvg()}<\/button>\n                      <\/div>`;
                 }
                 selectedKidGifts.appendChild(el);
             });
@@ -356,54 +509,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Delegated claim/unclaim (attach once)
             if (!kidsClaimBound) {
-                selectedKidGifts.addEventListener('click', async (ev) => {
-                    const claim = ev.target.closest('.btn-claim-kid');
-                    const unclaim = ev.target.closest('.btn-unclaim-kid');
-                    if (!claim && !unclaim) return;
-                    const idAttr = (claim || unclaim).getAttribute('data-id');
-                    const currentKidId = kidSelector.value;
+                // helpers
+                async function claimKidGift(idAttr, currentKidId, btnEl) {
                     if (idAttr.startsWith('local-kid-')) {
                         const enc = idAttr.substring(idAttr.indexOf(currentKidId + '-') + (currentKidId + '-').length);
                         const raw = decodeURIComponent(enc);
-                        const set = getLocalClaimSet(currentKidId);
-                        if (claim) { set.add(raw); showToast('Claimed (local)'); }
-                        else { set.delete(raw); showToast('Unclaimed (local)'); }
-                        saveLocalClaimSet(currentKidId, set);
-                        loadKidGifts(currentKidId);
-                        return;
+                        const set = getLocalClaimSet(currentKidId); set.add(raw); saveLocalClaimSet(currentKidId, set); showToast('Claimed (local)');
+                        return true;
                     }
-                    // DB-backed claim/unclaim
                     try {
                         const { supabase } = await import('./supabase.js');
                         const { data: userData } = await supabase.auth.getUser();
                         const me = userData?.user?.id;
-                        if (!me) { showToast('Sign in to claim', 'error'); return; }
-                        if (claim) {
-                            const { data, error } = await supabase
-                              .from('kid_gifts')
-                              .update({ claimed_by: me, claimed_at: new Date().toISOString() })
-                              .eq('id', idAttr)
-                              .is('claimed_by', null)
-                              .select('id');
-                            if (error) throw error;
-                            if (!data || data.length === 0) { showToast('Already claimed', 'error'); return; }
-                            showToast('Claimed');
-                        } else {
-                            const { data, error } = await supabase
-                              .from('kid_gifts')
-                              .update({ claimed_by: null, claimed_at: null })
-                              .eq('id', idAttr)
-                              .eq('claimed_by', me)
-                              .select('id');
-                            if (error) throw error;
-                            if (!data || data.length === 0) { showToast('Cannot unclaim this item', 'error'); return; }
-                            showToast('Unclaimed');
-                        }
-                        loadKidGifts(currentKidId);
-                    } catch (err) {
-                        console.error('claim/unclaim failed', err);
-                        showToast('Failed to update claim', 'error');
+                        if (!me) { showToast('Sign in to claim', 'error'); return false; }
+                        const { data, error } = await supabase
+                          .from('kid_gifts')
+                          .update({ claimed_by: me, claimed_at: new Date().toISOString() })
+                          .eq('id', idAttr)
+                          .is('claimed_by', null)
+                          .select('id');
+                        if (error) throw error;
+                        if (!data || data.length === 0) { showToast('Already claimed by someone else', 'error'); return false; }
+                        showToast('Claimed');
+                        return true;
+                    } catch (e) { console.error(e); showToast('Failed to claim', 'error'); return false; }
+                }
+                async function unclaimKidGift(idAttr, currentKidId, btnEl) {
+                    if (idAttr.startsWith('local-kid-')) {
+                        const enc = idAttr.substring(idAttr.indexOf(currentKidId + '-') + (currentKidId + '-').length);
+                        const raw = decodeURIComponent(enc);
+                        const set = getLocalClaimSet(currentKidId); set.delete(raw); saveLocalClaimSet(currentKidId, set); showToast('Unclaimed (local)');
+                        return true;
                     }
+                    try {
+                        const { supabase } = await import('./supabase.js');
+                        const { data: userData } = await supabase.auth.getUser();
+                        const me = userData?.user?.id;
+                        if (!me) { showToast('Sign in to unclaim', 'error'); return false; }
+                        const { data, error } = await supabase
+                          .from('kid_gifts')
+                          .update({ claimed_by: null, claimed_at: null })
+                          .eq('id', idAttr)
+                          .eq('claimed_by', me)
+                          .select('id');
+                        if (error) throw error;
+                        if (!data || data.length === 0) { showToast('Cannot unclaim (not yours)', 'error'); return false; }
+                        showToast('Unclaimed');
+                        return true;
+                    } catch (e) { console.error(e); showToast('Failed to unclaim', 'error'); return false; }
+                }
+                selectedKidGifts.addEventListener('click', async (ev) => {
+                    const claimBtn = ev.target.closest('.btn-claim-kid');
+                    const unclaimBtn = ev.target.closest('.btn-unclaim-kid');
+                    if (!claimBtn && !unclaimBtn) return;
+                    const btn = claimBtn || unclaimBtn;
+                    const idAttr = btn.getAttribute('data-id');
+                    const currentKidId = kidSelector.value;
+                    btn.classList.add('is-loading');
+                    const ok = claimBtn
+                      ? await claimKidGift(idAttr, currentKidId, btn)
+                      : await unclaimKidGift(idAttr, currentKidId, btn);
+                    btn.classList.remove('is-loading');
+                    if (ok) loadKidGifts(currentKidId); // refresh only if state changed
                 });
                 kidsClaimBound = true;
             }

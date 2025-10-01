@@ -101,6 +101,14 @@
           <textarea id="giftNotes" placeholder="Notes (optional)"></textarea>
           <button type="submit" class="btn-primary">Add Gift</button>
         </form>
+        <div style="display:flex; align-items:center; gap:12px; margin:4px 0 12px 0; flex-wrap:wrap;" id="multiSelectBar">
+          <button type="button" id="multiSelectToggle" class="btn-secondary" style="font-size:13px; padding:6px 10px;">Select Multiple</button>
+          <div id="multiSelectActions" style="display:none; gap:8px; align-items:center;">
+            <span id="multiSelectCount" style="font-size:12px; opacity:.75;">0 selected</span>
+            <button type="button" id="multiDeleteBtn" class="btn-delete" style="padding:6px 10px; font-size:13px;">Delete Selected</button>
+            <button type="button" id="multiCancelBtn" class="btn-secondary" style="font-size:13px; padding:6px 10px;">Cancel</button>
+          </div>
+        </div>
         <div id="myGiftsList" class="gifts-list"></div>
       </div>
     </div>
@@ -198,24 +206,22 @@
     <!-- Adult Gift Form -->
     <form id="adultGiftForm" class="gift-form adult-form">
       <h3 class="form-title">Your Gift Ideas</h3>
-      <p class="helper-text">Add gift ideas you would like to receive. Only you can submit ideas for yourself.</p>
-      <!-- Submission mode toggle -->
-      <div id="devSubmissionMode" class="form-group" style="margin: 8px 0 12px 0; display: flex; align-items: center; gap: 10px;">
-        <span style="font-weight:600;">Add as:</span>
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="radio" name="devMode" value="idea" checked>
-          Idea
-        </label>
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="radio" name="devMode" value="link">
-          Link
-        </label>
+      <p class="helper-text">Add gift ideas you would like to receive. Switch to Link for a specific product. Auto-detect will switch when a URL is detected.</p>
+      <div class="form-group" style="display:flex;align-items:center;gap:12px;margin:8px 0 14px 0;">
+        <label style="font-weight:600;">Add as:</label>
+        <div class="segmented" id="giftModeToggle" role="radiogroup" aria-label="Add as" data-mode="idea">
+          <span class="segmented-indicator"></span>
+          <button type="button" class="segment" data-mode="idea" role="radio" aria-checked="true">Idea</button>
+          <button type="button" class="segment" data-mode="link" role="radio" aria-checked="false">Link</button>
+        </div>
+        <input type="hidden" id="giftModeHidden" value="idea">
       </div>
-      <div id="devIdeaModeFields">
-        <label for="adultGiftIdeas">Gift Ideas for You:</label>
-        <textarea id="adultGiftIdeas" name="giftIdeas" rows="12" required></textarea>
+      <div id="ideaFields">
+        <label for="adultGiftIdeas">Gift Ideas (one per line):</label>
+  <textarea id="adultGiftIdeas" rows="10" required></textarea>
+        <div id="autoDetectNote" class="auto-detect-note hide">Detected a link. Switched to Link mode. You can switch back.</div>
       </div>
-      <div id="devLinkModeFields" class="form-group" style="display:none;">
+      <div id="linkFields" style="display:none;">
         <label for="devLinkUrl">Product link (http/https):</label>
         <input type="url" id="devLinkUrl" placeholder="https://example.com/product" pattern="https?://.*">
         <label for="devLinkCaption" style="margin-top:8px;">Optional caption/title:</label>
@@ -237,17 +243,15 @@
         <button type="button" id="addChildBtn" class="btn-secondary" style="margin-left:8px">+ Add child</button>
       </div>
 
-      <!-- Kids submission mode toggle -->
-      <div id="devKidsSubmissionMode" class="form-group" style="margin: 8px 0 12px 0; display: flex; align-items: center; gap: 10px;">
-        <span style="font-weight:600;">Add as:</span>
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="radio" name="devKidsMode" value="idea" checked>
-          Idea
-        </label>
-        <label style="display:flex; align-items:center; gap:6px;">
-          <input type="radio" name="devKidsMode" value="link">
-          Link
-        </label>
+      <!-- Kids submission mode toggle (segmented style) -->
+      <div class="form-group" style="margin:8px 0 14px 0; display:flex;align-items:center;gap:12px;">
+        <label style="font-weight:600;">Add as:</label>
+        <div class="segmented" id="kidsModeToggle" role="radiogroup" aria-label="Add as" data-mode="idea">
+          <span class="segmented-indicator"></span>
+          <button type="button" class="segment" data-mode="idea" role="radio" aria-checked="true">Idea</button>
+          <button type="button" class="segment" data-mode="link" role="radio" aria-checked="false">Link</button>
+        </div>
+        <input type="hidden" id="kidsModeHidden" value="idea">
       </div>
       <div id="devKidsIdeaFields" class="form-group">
         <label for="kidsGiftIdeas">Gift Ideas for Selected Child:</label>
@@ -295,13 +299,15 @@
     import { supabase, addGiftToList, getCurrentUser, getMyGifts, addKidGift, getKidGifts, deleteKidGift } from './supabase.js';
     import { showToast, confirmDialog, editGiftDialog } from './ui.js';
 
-    const adultForm = document.getElementById('adultGiftForm');
-    const modeWrap = document.getElementById('devSubmissionMode');
-    const ideaFields = document.getElementById('devIdeaModeFields');
-    const linkFields = document.getElementById('devLinkModeFields');
-    const urlInput = document.getElementById('devLinkUrl');
-    const captionInput = document.getElementById('devLinkCaption');
-    const ideaTextarea = document.getElementById('adultGiftIdeas');
+  const adultForm = document.getElementById('adultGiftForm');
+  const giftModeToggle = document.getElementById('giftModeToggle');
+  const giftModeHidden = document.getElementById('giftModeHidden');
+  const ideaTextarea = document.getElementById('adultGiftIdeas');
+  const linkFields = document.getElementById('linkFields');
+  const ideaFields = document.getElementById('ideaFields');
+  const urlInput = document.getElementById('devLinkUrl');
+  const captionInput = document.getElementById('devLinkCaption');
+  const autoDetectNote = document.getElementById('autoDetectNote');
     const myGiftListBtn = document.getElementById('myGiftList');
     const myGiftsList = document.getElementById('myGiftsList');
     const kidsForm = document.getElementById('kidsGiftForm');
@@ -309,80 +315,118 @@
     const kidsListBtn = document.getElementById('kidsGiftList');
     const kidSelectorInModal = document.getElementById('kidSelector');
     const selectedKidGifts = document.getElementById('selectedKidGifts');
-    const kidsModeWrap = document.getElementById('devKidsSubmissionMode');
+  const kidsModeToggle = document.getElementById('kidsModeToggle');
+  const kidsModeHidden = document.getElementById('kidsModeHidden');
     const kidsIdeaFields = document.getElementById('devKidsIdeaFields');
     const kidsLinkFields = document.getElementById('devKidsLinkFields');
     const kidUrlInput = document.getElementById('devKidLinkUrl');
     const kidCaptionInput = document.getElementById('devKidLinkCaption');
     const kidsTextarea = document.getElementById('kidsGiftIdeas');
 
-    function getSelectedMode() { const checked = modeWrap?.querySelector('input[name="devMode"]:checked'); return checked ? checked.value : 'idea'; }
-    function setModeUI(mode) {
-      if (!ideaFields || !linkFields) return;
-      if (mode === 'link') { ideaFields.style.display = 'none'; linkFields.style.display = ''; if (ideaTextarea) ideaTextarea.required = false; if (urlInput) urlInput.required = true; }
-      else { ideaFields.style.display = ''; linkFields.style.display = 'none'; if (ideaTextarea) ideaTextarea.required = true; if (urlInput) urlInput.required = false; }
+    function setGiftMode(mode, {auto=false}={}) {
+      giftModeHidden.value = mode;
+      giftModeToggle.dataset.mode = mode;
+      giftModeToggle.querySelectorAll('.segment').forEach(btn=>{
+        btn.setAttribute('aria-checked', btn.dataset.mode===mode ? 'true':'false');
+      });
+      if (mode==='idea') { ideaFields.style.display=''; linkFields.style.display='none'; urlInput.required=false; ideaTextarea.required=true; }
+      else { ideaFields.style.display='none'; linkFields.style.display=''; urlInput.required=true; ideaTextarea.required=false; }
+      if (auto) { autoDetectNote?.classList.remove('hide'); setTimeout(()=>autoDetectNote?.classList.add('hide'), 3200); }
+      else { autoDetectNote?.classList.add('hide'); }
     }
-    modeWrap?.addEventListener('change', () => setModeUI(getSelectedMode())); setModeUI(getSelectedMode());
+    giftModeToggle?.addEventListener('click', e=>{ const btn=e.target.closest('.segment'); if(!btn) return; setGiftMode(btn.dataset.mode); });
+    giftModeToggle?.addEventListener('keydown', e=>{ if(!['ArrowLeft','ArrowRight'].includes(e.key)) return; e.preventDefault(); const next = giftModeHidden.value==='idea'?'link':'idea'; setGiftMode(next); giftModeToggle.querySelector(`.segment[data-mode="${next}"]`)?.focus(); });
+    setGiftMode('idea');
+
+    // Auto-detect URL in idea textarea (single line or line with caption + url)
+    const endUrlRegex = /(https?:\/\/[^\s]+)$/i;
+    ideaTextarea?.addEventListener('input', () => {
+      const val = ideaTextarea.value.trim();
+      if (!val) { ideaTextarea.classList.remove('url-invalid'); return; }
+      if (!val.includes('\n')) { // single line
+        const m = val.match(endUrlRegex);
+        if (m) {
+          const url = m[1];
+          const caption = val.slice(0, val.lastIndexOf(url)).trim();
+            // switch to link mode
+          setGiftMode('link', {auto:true});
+          urlInput.value = url;
+          captionInput.value = caption;
+          ideaTextarea.value='';
+        }
+      }
+    });
 
     function normalizeUrl(inputUrl) { try { const u = new URL(inputUrl); if (!/^https?:$/.test(u.protocol)) return null; const strip=[/^utm_/i,/^fbclid$/i,/^gclid$/i,/^igshid$/i,/^mc_eid$/i,/^mc_cid$/i,/^ref$/i]; [...u.searchParams.keys()].forEach(k=>{ if(strip.some(r=>r.test(k))) u.searchParams.delete(k);}); const host=u.hostname.replace(/^www\./,''); if(host.includes('amazon.')){ const m=u.pathname.match(/(?:dp|gp\/product)\/([A-Z0-9]{10})/i)||u.pathname.match(/\/([A-Z0-9]{10})(?:[/?]|$)/i); if(m&&m[1]){ u.pathname=`/dp/${m[1].toUpperCase()}`; u.search=''; } u.searchParams.delete('tag'); } u.protocol='https:'; return u.toString(); } catch{ return null; } }
 
-    // Adult submit: Link mode override
-    adultForm?.addEventListener('submit', async (e) => {
-      if (getSelectedMode() !== 'link') return;
-      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.();
-      const rawUrl = (urlInput?.value || '').trim(); if (!rawUrl) { showToast('Enter a product link', 'error'); return; }
-      const normalized = normalizeUrl(rawUrl); if (!normalized) { showToast('Enter a valid http/https link', 'error'); return; }
-      const caption = (captionInput?.value || '').trim();
-      try {
-        const user = await getCurrentUser().catch(() => null);
-        if (user && user.id) { const name = caption || new URL(normalized).hostname.replace(/^www\./,''); await addGiftToList({ name, link: normalized }); showToast('Link added'); }
-        else {
-          const display = caption ? `${caption} (${normalized})` : normalized; const existing = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]'); existing.push(display); localStorage.setItem('my_gift_ideas', JSON.stringify(existing)); showToast('Link added locally');
-        }
-        if (urlInput) urlInput.value = ''; if (captionInput) captionInput.value = ''; window.dispatchEvent(new CustomEvent('my-gifts-updated'));
-      } catch(err){ console.error(err); showToast('Failed to add link', 'error'); }
-    }, true);
+    // (Removed legacy adult link-only submit handler & mode radio logic)
 
-    // Kids: mode switch
-    function getSelectedKidsMode(){ const c = kidsModeWrap?.querySelector('input[name="devKidsMode"]:checked'); return c ? c.value : 'idea'; }
-    function setKidsModeUI(mode){ if(!kidsIdeaFields||!kidsLinkFields) return; if(mode==='link'){ kidsIdeaFields.style.display='none'; kidsLinkFields.style.display=''; if(kidsTextarea) kidsTextarea.required=false; if(kidUrlInput) kidUrlInput.required=true; } else { kidsIdeaFields.style.display=''; kidsLinkFields.style.display='none'; if(kidsTextarea) kidsTextarea.required=true; if(kidUrlInput) kidUrlInput.required=false; } }
-    kidsModeWrap?.addEventListener('change', ()=> setKidsModeUI(getSelectedKidsMode())); setKidsModeUI(getSelectedKidsMode());
-
-    // Kids submit: Link mode override
-    kidsForm?.addEventListener('submit', async (e)=>{
-      const mode = getSelectedKidsMode();
-      if(mode !== 'link') {
-        // Idea mode: if not signed in, save locally so you can test offline
-        try {
-          const user = await getCurrentUser().catch(()=>null);
-          if (user && user.id) return; // let app.js handle DB path
-        } catch {}
-        e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.();
-        const kidId = childSelect?.value || '';
-        if (!kidId) { showToast('Select a child', 'error'); return; }
-        const raw = (kidsTextarea?.value || '').trim();
-        if (!raw) { showToast('Enter at least one idea', 'error'); return; }
-        const lines = raw.split('\n').map(s=>s.trim()).filter(Boolean);
-        try {
-          const key = localKeyForKid(kidId);
-          const arr = JSON.parse(localStorage.getItem(key) || '[]');
-          lines.forEach(line => { if (!arr.includes(line)) arr.push(line); });
-          localStorage.setItem(key, JSON.stringify(arr));
-          if (kidsTextarea) kidsTextarea.value = '';
-          showToast('Suggestions added (local)');
-          window.dispatchEvent(new CustomEvent('kid-gifts-updated',{detail:{kidId}}));
-        } catch(err){ console.error(err); showToast('Failed to save locally','error'); }
-        return;
+    // Kids: segmented mode logic
+    function getSelectedKidsMode(){ return kidsModeHidden?.value || 'idea'; }
+    function setKidsModeUI(mode){
+      if(!kidsIdeaFields||!kidsLinkFields) return;
+      kidsModeHidden.value = mode;
+      kidsModeToggle.dataset.mode = mode;
+      kidsModeToggle.querySelectorAll('.segment').forEach(btn=>{
+        btn.setAttribute('aria-checked', btn.dataset.mode===mode ? 'true':'false');
+      });
+      if(mode==='link'){
+        kidsIdeaFields.style.display='none';
+        kidsLinkFields.style.display='';
+        if(kidsTextarea) kidsTextarea.required=false;
+        if(kidUrlInput) kidUrlInput.required=true;
+      } else {
+        kidsIdeaFields.style.display='';
+        kidsLinkFields.style.display='none';
+        if(kidsTextarea) kidsTextarea.required=true;
+        if(kidUrlInput) kidUrlInput.required=false;
       }
-      // Link mode override
-      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation?.();
-      const kidId = childSelect?.value || ''; if(!kidId){ showToast('Select a child', 'error'); return; }
-      const rawUrl = (kidUrlInput?.value||'').trim(); if(!rawUrl){ showToast('Enter a product link', 'error'); return; }
-      const normalized = normalizeUrl(rawUrl); if(!normalized){ showToast('Enter a valid http/https link', 'error'); return; }
-      const caption = (kidCaptionInput?.value||'').trim(); const name = `${caption || (new URL(normalized)).hostname.replace(/^www\./,'')} (${normalized})`;
-      try{ const user = await getCurrentUser().catch(()=>null); if(user&&user.id){ await addKidGift(kidId,{name}); } else { const key=`kid_gifts_local:${kidId}`; const arr=JSON.parse(localStorage.getItem(key)||'[]'); if(!arr.includes(name)) arr.push(name); localStorage.setItem(key, JSON.stringify(arr)); }
-        if(kidUrlInput) kidUrlInput.value=''; if(kidCaptionInput) kidCaptionInput.value=''; showToast('Link added'); window.dispatchEvent(new CustomEvent('kid-gifts-updated',{detail:{kidId}})); } catch(err){ console.error(err); showToast('Failed to add link', 'error'); }
-    }, true);
+    }
+    kidsModeToggle?.addEventListener('click', e=>{ const btn=e.target.closest('.segment'); if(!btn) return; setKidsModeUI(btn.dataset.mode); });
+    kidsModeToggle?.addEventListener('keydown', e=>{ if(!['ArrowLeft','ArrowRight'].includes(e.key)) return; e.preventDefault(); const next = getSelectedKidsMode()==='idea'?'link':'idea'; setKidsModeUI(next); kidsModeToggle.querySelector(`.segment[data-mode="${next}"]`)?.focus(); });
+    setKidsModeUI('idea');
+
+    // Adult submit (segmented)
+    adultForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const mode = giftModeHidden.value;
+      const user = await getCurrentUser().catch(()=>null);
+      if (mode === 'idea') {
+        const raw = ideaTextarea.value.trim();
+        if (!raw) { showToast('Add at least one idea', 'error'); return; }
+        const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+        if (!lines.length) { showToast('Nothing to add', 'error'); return; }
+        if (user && user.id) {
+          for (const line of lines) { try { await addGiftToList({ name: line }); } catch(e2){ console.error(e2); } }
+        } else {
+          const existing = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]');
+          lines.forEach(l=> existing.push(l));
+          localStorage.setItem('my_gift_ideas', JSON.stringify(existing));
+        }
+        showToast(`Added ${lines.length} idea${lines.length!==1?'s':''}`);
+        ideaTextarea.value='';
+      } else { // link mode
+        const rawUrl = (urlInput.value||'').trim();
+        if (!rawUrl) { showToast('Enter a product link', 'error'); return; }
+        const normalized = normalizeUrl(rawUrl);
+        if (!normalized) { showToast('Enter a valid http/https link', 'error'); urlInput.classList.add('url-invalid'); return; }
+        urlInput.classList.remove('url-invalid');
+        const caption = (captionInput.value||'').trim();
+        const name = caption || new URL(normalized).hostname.replace(/^www\./,'');
+        try {
+          if (user && user.id) { await addGiftToList({ name, link: normalized }); }
+          else {
+            const existing = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]');
+            existing.push(caption ? `${caption} (${normalized})` : normalized);
+            localStorage.setItem('my_gift_ideas', JSON.stringify(existing));
+          }
+          showToast('Link added');
+          urlInput.value=''; captionInput.value='';
+        } catch(err){ console.error(err); showToast('Failed to add link', 'error'); }
+      }
+      loadMyGifts?.();
+    });
+    // (Removed obsolete mixed kids handler block that was left after refactor)
 
     // Helpers for local claims
     function localKeyForKid(k){ return `kid_gifts_local:${k}`; }
