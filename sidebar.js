@@ -422,17 +422,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const giftsDb = await getKidGifts(kidId); // includes potential claimed_by
             const gifts = [ ...(giftsDb || []), ...getLocalKidGifts(kidId) ]; // merge local offline
             selectedKidGifts.innerHTML = '';
-            // Insert filter toggle once (unclaimed filter)
+            // Insert filter toggles once
             if (!document.getElementById('unclaimedFilterToggle')) {
                 const filterWrap = document.createElement('div');
                 filterWrap.className = 'unclaimed-filter-toggle';
-                filterWrap.innerHTML = `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">\n                  <input id="unclaimedFilterToggle" type="checkbox" />\n                  <span>Show only unclaimed</span>\n                </label>`;
+                filterWrap.style.display = 'flex';
+                filterWrap.style.gap = '16px';
+                filterWrap.innerHTML = `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">\n                  <input id="unclaimedFilterToggle" type="checkbox" />\n                  <span>Show only unclaimed</span>\n                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">\n                  <input id="claimedAllToggle" type="checkbox" />\n                  <span>Show all claimed gifts</span>\n                </label>`;
                 selectedKidGifts.parentElement?.insertBefore(filterWrap, selectedKidGifts);
-                filterWrap.addEventListener('change', () => loadKidGifts(kidId));
+                // Ensure mutual exclusivity
+                filterWrap.addEventListener('change', (e) => {
+                    const unclaimed = document.getElementById('unclaimedFilterToggle');
+                    const claimedAll = document.getElementById('claimedAllToggle');
+                    if (e.target === unclaimed && unclaimed.checked && claimedAll.checked) {
+                        claimedAll.checked = false;
+                    }
+                    if (e.target === claimedAll && claimedAll.checked && unclaimed.checked) {
+                        unclaimed.checked = false;
+                    }
+                    loadKidGifts(kidId);
+                });
             }
             const onlyUnclaimed = !!document.getElementById('unclaimedFilterToggle')?.checked;
+            const showClaimedAll = !!document.getElementById('claimedAllToggle')?.checked;
             if (!gifts || gifts.length === 0) {
                 selectedKidGifts.innerHTML = '<p class="no-gifts-message">No suggestions yet.</p>';
+                return;
+            }
+            // If showing all claimed across kids, render unified list and return early
+            if (showClaimedAll) {
+                await renderAllClaimedAcrossKids();
                 return;
             }
             gifts.forEach(g => {
@@ -575,6 +595,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 kidsClaimBound = true;
             }
         } catch (e) { console.error('Failed to load kid gifts', e); }
+    }
+
+    async function renderAllClaimedAcrossKids() {
+        try {
+            const container = selectedKidGifts;
+            container.innerHTML = '';
+            const { getMyClaimedKidGifts } = await import('./supabase.js');
+            const list = await getMyClaimedKidGifts();
+            if (!list || list.length === 0) {
+                container.innerHTML = '<p class="no-gifts-message">No claimed gifts yet.</p>';
+                return;
+            }
+            list.forEach(g => {
+                const el = document.createElement('div');
+                const link = g.link || extractLinkFromName(g.name);
+                const hasLink = !!link;
+                const kidName = g.kids?.name || g.kid_name || 'Unknown child';
+                const titleSuffix = kidName ? ` — <span style="color:#047857">${kidName}</span>` : '';
+                if (hasLink) {
+                    const dom = domainFromUrl(link);
+                    const titleText = String(g.name||'').replace(/\s*\((https?:[^)]+)\)\s*$/i,'').trim() || '(Link)';
+                    el.className = 'gift-item link-card gift-claimed-mine';
+                    el.innerHTML = `
+                    <div style="display:flex; gap:12px; align-items:center; width:100%;">\n                      <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">\n                        <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">\n                          <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">\n                        </div>\n                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">\n                          <h3 style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${titleText}${titleSuffix}<\/h3>\n                          <p class="gift-link" style="margin:0; color:#4b5563; font-size:13px;">${dom} ↗<\/p>\n                        <\/div>\n                      <\/a>\n                      <div class="gift-item-actions" style="margin-left:auto;">\n                        <span class="claimer-badge" title="You claimed this">You<\/span>\n                      <\/div>\n                    <\/div>`;
+                } else {
+                    el.className = 'gift-item compact gift-claimed-mine';
+                    el.innerHTML = `
+                      <div class="gift-item-info">\n                        <h3>${g.name}${titleSuffix}<\/h3>\n                      <\/div>\n                      <div class="gift-item-actions" style="margin-left:auto;">\n                        <span class="claimer-badge" title="You claimed this">You<\/span>\n                      <\/div>`;
+                }
+                container.appendChild(el);
+            });
+        } catch (e) {
+            console.error('Failed to render all claimed gifts', e);
+            selectedKidGifts.innerHTML = '<p class="no-gifts-message">Unable to load claimed gifts.</p>';
+        }
     }
 
     // Handle adding new gifts
