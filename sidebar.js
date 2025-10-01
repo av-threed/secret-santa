@@ -551,8 +551,16 @@ document.addEventListener('DOMContentLoaded', () => {
                           .from('kid_gifts')
                           .update({ claimed_by: null, claimed_at: null })
                           .eq('id', idAttr)
+                          .eq('claimed_by', me)
                           .select('id');
-                        if (error) throw error;
+                        if (error) {
+                            const msg = String(error?.message || '').toLowerCase();
+                            if (error.code === '42501' || msg.includes('row-level security') || msg.includes('permission')) {
+                                showToast('Cannot unclaim (not yours)', 'error');
+                                return false;
+                            }
+                            throw error;
+                        }
                         if (!data || data.length === 0) { showToast('Cannot unclaim (not yours)', 'error'); return false; }
                         showToast('Unclaimed');
                         return true;
