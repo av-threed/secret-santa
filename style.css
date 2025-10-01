@@ -507,8 +507,17 @@ body {
 
 /* Claim state styling */
 .gift-item.gift-unclaimed { border-color: var(--color-border); }
-.gift-item.gift-claimed-mine { border-color: var(--status-done); box-shadow: 0 0 0 1px var(--status-done) inset; }
-.gift-item.gift-claimed-other { border-color: var(--status-hold); box-shadow: 0 0 0 1px var(--status-hold) inset; opacity: 0.92; }
+/* Highlight entire card when claimed */
+.gift-item.gift-claimed-mine {
+  border-color: var(--status-done);
+  box-shadow: 0 0 0 1px var(--status-done) inset;
+  background: rgba(16,185,129,0.10); /* green tint */
+}
+.gift-item.gift-claimed-other {
+  border-color: var(--status-hold);
+  box-shadow: 0 0 0 1px var(--status-hold) inset;
+  background: rgba(217,119,6,0.12); /* amber tint */
+}
 
 .claimer-badge {
   background: rgba(12,90,58,0.12);

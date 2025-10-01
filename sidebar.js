@@ -442,7 +442,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isLocal = String(g.id).startsWith('local-kid-');
                 const isClaimed = !!g.claimed_by;
                 const isMine = isClaimed && me && String(g.claimed_by) === String(me);
-                if (onlyUnclaimed && isClaimed && !isMine && !isLocal) return; // skip
+                // When filtering for only unclaimed, exclude all claimed items (including mine or local)
+                if (onlyUnclaimed && isClaimed) return; // skip any claimed items
                 let itemStateClass = 'gift-unclaimed';
                 if (isClaimed && isMine) itemStateClass = 'gift-claimed-mine';
                 else if (isClaimed) itemStateClass = 'gift-claimed-other';
