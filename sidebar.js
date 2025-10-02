@@ -550,7 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!me) { showToast('Sign in to claim', 'error'); return false; }
                         const { data, error } = await supabase
                           .from('kid_gifts')
-                          .update({ claimed_by: me })
+                          .update({ claimed_by: me, claimed_at: new Date().toISOString() })
                           .eq('id', idAttr)
                           .is('claimed_by', null)
                           .select('id');
@@ -581,7 +581,6 @@ document.addEventListener('DOMContentLoaded', () => {
                           .from('kid_gifts')
                           .update({ claimed_by: null, claimed_at: null })
                           .eq('id', idAttr)
-                          .eq('claimed_by', me)
                           .select('id');
                         if (btnEl) btnEl.disabled = false;
                         if (error) {
@@ -603,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!claimBtn && !unclaimBtn) return;
                     const btn = claimBtn || unclaimBtn;
                     const idAttr = btn.getAttribute('data-id');
-                    const currentKidId = kidSelector.value;
+                    const currentKidId = btn.getAttribute('data-kid') || kidSelector.value;
                     btn.classList.add('is-loading');
                     const ok = claimBtn
                       ? await claimKidGift(idAttr, currentKidId, btn)

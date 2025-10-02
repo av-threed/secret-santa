@@ -219,6 +219,7 @@ export async function getMyClaimedKidGifts({ from = 0, limit = 50 } = {}) {
         .eq('claimed_by', me)
         .order('claimed_at', { ascending: false })
         .range(from, to);
+    let rows = data || [];
     if (error) {
         const res = await supabase
             .from('kid_gifts')
@@ -227,9 +228,31 @@ export async function getMyClaimedKidGifts({ from = 0, limit = 50 } = {}) {
             .order('claimed_at', { ascending: false })
             .range(from, to);
         if (res.error) throw res.error;
-        return res.data || [];
+        rows = res.data || [];
     }
-    return data || [];
+
+    // Ensure we always return the kid's name for display even if the relation isn't present
+    try {
+        const missingKidNames = rows.some(g => !(g?.kids && g.kids.name));
+        if (missingKidNames) {
+            const uniqueKidIds = Array.from(new Set(rows.map(g => g.kid_id).filter(Boolean)));
+            if (uniqueKidIds.length > 0) {
+                const { data: kidRows, error: kidErr } = await supabase
+                    .from('kids')
+                    .select('id, name')
+                    .in('id', uniqueKidIds);
+                if (!kidErr && kidRows) {
+                    const idToName = Object.fromEntries(kidRows.map(k => [k.id, k.name]));
+                    rows = rows.map(g => {
+                        const kidName = g?.kids?.name || idToName[g.kid_id] || null;
+                        return kidName ? { ...g, kid_name: kidName, kids: g.kids || { name: kidName } } : g;
+                    });
+                }
+            }
+        }
+    } catch (_) { /* best-effort enrichment */ }
+
+    return rows;
 }
 
 // Recipient self-serve helpers
