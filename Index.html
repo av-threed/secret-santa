@@ -295,8 +295,8 @@
   <script type="module" src="auth.js"></script>
   <!-- Production script: link mode, link cards, edit modal, claim/unclaim (includes offline fallback) -->
   <script type="module">
-    import { supabase, addGiftToList, getCurrentUser, getMyGifts, addKidGift, getKidGifts, deleteKidGift } from './supabase.js';
-    import { showToast, confirmDialog, editGiftDialog } from './ui.js';
+    import { supabase, addGiftToList, getCurrentUser, getMyGifts, addKidGift, getKidGifts, deleteKidGift, getKids, findOrCreateKid } from './supabase.js';
+    import { showToast, confirmDialog, editGiftDialog, inputDialog } from './ui.js';
 
   const adultForm = document.getElementById('adultGiftForm');
   const giftModeToggle = document.getElementById('giftModeToggle');
@@ -309,8 +309,9 @@
   const autoDetectNote = document.getElementById('autoDetectNote');
     const myGiftListBtn = document.getElementById('myGiftList');
     const myGiftsList = document.getElementById('myGiftsList');
-    const kidsForm = document.getElementById('kidsGiftForm');
-    const childSelect = document.getElementById('childSelect');
+  const kidsForm = document.getElementById('kidsGiftForm');
+  const childSelect = document.getElementById('childSelect');
+  const addChildBtn = document.getElementById('addChildBtn');
     const kidsListBtn = document.getElementById('kidsGiftList');
     const kidSelectorInModal = document.getElementById('kidSelector');
     const selectedKidGifts = document.getElementById('selectedKidGifts');
@@ -384,6 +385,38 @@
     kidsModeToggle?.addEventListener('click', e=>{ const btn=e.target.closest('.segment'); if(!btn) return; setKidsModeUI(btn.dataset.mode); });
     kidsModeToggle?.addEventListener('keydown', e=>{ if(!['ArrowLeft','ArrowRight'].includes(e.key)) return; e.preventDefault(); const next = getSelectedKidsMode()==='idea'?'link':'idea'; setKidsModeUI(next); kidsModeToggle.querySelector(`.segment[data-mode="${next}"]`)?.focus(); });
     setKidsModeUI('idea');
+
+    // Populate kids in main form (moved from app.js)
+    async function populateKidsMain() {
+      try {
+        const kids = await getKids();
+        while (childSelect.options.length > 1) childSelect.remove(1);
+        kids.forEach(k => {
+          const opt = document.createElement('option');
+          opt.value = k.id;
+          opt.textContent = k.name;
+          childSelect.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('Failed to load kids', e);
+      }
+    }
+    await populateKidsMain();
+
+    // "+ Add child" in main form
+    addChildBtn?.addEventListener('click', async () => {
+      const name = await inputDialog({ title: 'Add Child', label: "Child's name", placeholder: 'e.g., Emma', confirmText: 'Add Child' });
+      if (!name) return;
+      try {
+        const kid = await findOrCreateKid(name);
+        await populateKidsMain();
+        childSelect.value = kid.id;
+        showToast('Child added');
+      } catch (e) {
+        console.error('Failed to add child', e);
+        showToast('Failed to add child', 'error');
+      }
+    });
 
     // Adult submit (segmented)
     adultForm?.addEventListener('submit', async (e) => {

@@ -478,34 +478,22 @@ document.addEventListener('DOMContentLoaded', () => {
                   kidsMultiSelectMode = false; selectedKidGiftIds.clear(); updateKidsMultiBar(); loadKidGifts(kidId);
                 });
             }
-            // Insert filter toggles once
-            if (!document.getElementById('unclaimedFilterToggle')) {
+            // Insert claimed-all toggle once
+            if (!document.getElementById('claimedAllToggle')) {
                 const filterWrap = document.createElement('div');
                 filterWrap.className = 'unclaimed-filter-toggle';
                 filterWrap.style.display = 'flex';
                 filterWrap.style.gap = '16px';
-                const savedUnclaimed = localStorage.getItem('ui_unclaimed_only') === '1';
                 const savedClaimedAll = localStorage.getItem('ui_claimed_all') === '1';
-                filterWrap.innerHTML = `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">\n                  <input id="unclaimedFilterToggle" type="checkbox" ${savedUnclaimed ? 'checked' : ''} />\n                  <span>Show only unclaimed</span>\n                </label>
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">\n                  <input id="claimedAllToggle" type="checkbox" ${savedClaimedAll ? 'checked' : ''} />\n                  <span>Show all claimed gifts</span>\n                </label>`;
+                filterWrap.innerHTML = `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">\n                  <input id="claimedAllToggle" type="checkbox" ${savedClaimedAll ? 'checked' : ''} />\n                  <span>Show all claimed gifts</span>\n                </label>`;
                 selectedKidGifts.parentElement?.insertBefore(filterWrap, selectedKidGifts);
-                // Ensure mutual exclusivity
                 filterWrap.addEventListener('change', (e) => {
-                    const unclaimed = document.getElementById('unclaimedFilterToggle');
                     const claimedAll = document.getElementById('claimedAllToggle');
-                    if (e.target === unclaimed && unclaimed.checked && claimedAll.checked) {
-                        claimedAll.checked = false;
-                    }
-                    if (e.target === claimedAll && claimedAll.checked && unclaimed.checked) {
-                        unclaimed.checked = false;
-                    }
                     // Persist preferences
-                    localStorage.setItem('ui_unclaimed_only', document.getElementById('unclaimedFilterToggle')?.checked ? '1' : '0');
                     localStorage.setItem('ui_claimed_all', document.getElementById('claimedAllToggle')?.checked ? '1' : '0');
                     loadKidGifts(kidId);
                 });
             }
-            const onlyUnclaimed = !!document.getElementById('unclaimedFilterToggle')?.checked;
             const showClaimedAll = !!document.getElementById('claimedAllToggle')?.checked;
             if (!gifts || gifts.length === 0) {
                 selectedKidGifts.innerHTML = '<p class="no-gifts-message">No suggestions yet.</p>';
@@ -523,8 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isLocal = String(g.id).startsWith('local-kid-');
                 const isClaimed = !!g.claimed_by;
                 const isMine = isClaimed && me && String(g.claimed_by) === String(me);
-                // When filtering for only unclaimed, exclude all claimed items (including mine or local)
-                if (onlyUnclaimed && isClaimed) return; // skip any claimed items
+                // No unclaimed-only filtering; show items regardless of claim status in per-kid view
                 let itemStateClass = 'gift-unclaimed';
                 if (isClaimed && isMine) itemStateClass = 'gift-claimed-mine';
                 else if (isClaimed) itemStateClass = 'gift-claimed-other';
