@@ -206,23 +206,26 @@ export async function getProfile(userId) {
     return data || { full_name: null };
 }
 
-// Claimed kid gifts for the current user across all kids
-export async function getMyClaimedKidGifts() {
+// Claimed kid gifts for the current user across all kids (supports pagination)
+export async function getMyClaimedKidGifts({ from = 0, limit = 50 } = {}) {
     const { data: userData } = await supabase.auth.getUser();
     const me = userData?.user?.id;
     if (!me) return [];
+    const to = Math.max(0, from + limit - 1);
     // Try relational select to include kid names; fall back if needed
     let { data, error } = await supabase
         .from('kid_gifts')
         .select('id, name, link, notes, price, kid_id, claimed_by, claimed_at, kids(name)')
         .eq('claimed_by', me)
-        .order('claimed_at', { ascending: false });
+        .order('claimed_at', { ascending: false })
+        .range(from, to);
     if (error) {
         const res = await supabase
             .from('kid_gifts')
             .select('id, name, link, notes, price, kid_id, claimed_by, claimed_at')
             .eq('claimed_by', me)
-            .order('claimed_at', { ascending: false });
+            .order('claimed_at', { ascending: false })
+            .range(from, to);
         if (res.error) throw res.error;
         return res.data || [];
     }

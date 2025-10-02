@@ -428,8 +428,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 filterWrap.className = 'unclaimed-filter-toggle';
                 filterWrap.style.display = 'flex';
                 filterWrap.style.gap = '16px';
-                filterWrap.innerHTML = `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">\n                  <input id="unclaimedFilterToggle" type="checkbox" />\n                  <span>Show only unclaimed</span>\n                </label>
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">\n                  <input id="claimedAllToggle" type="checkbox" />\n                  <span>Show all claimed gifts</span>\n                </label>`;
+                const savedUnclaimed = localStorage.getItem('ui_unclaimed_only') === '1';
+                const savedClaimedAll = localStorage.getItem('ui_claimed_all') === '1';
+                filterWrap.innerHTML = `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">\n                  <input id="unclaimedFilterToggle" type="checkbox" ${savedUnclaimed ? 'checked' : ''} />\n                  <span>Show only unclaimed</span>\n                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">\n                  <input id="claimedAllToggle" type="checkbox" ${savedClaimedAll ? 'checked' : ''} />\n                  <span>Show all claimed gifts</span>\n                </label>`;
                 selectedKidGifts.parentElement?.insertBefore(filterWrap, selectedKidGifts);
                 // Ensure mutual exclusivity
                 filterWrap.addEventListener('change', (e) => {
@@ -441,6 +443,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (e.target === claimedAll && claimedAll.checked && unclaimed.checked) {
                         unclaimed.checked = false;
                     }
+                    // Persist preferences
+                    localStorage.setItem('ui_unclaimed_only', document.getElementById('unclaimedFilterToggle')?.checked ? '1' : '0');
+                    localStorage.setItem('ui_claimed_all', document.getElementById('claimedAllToggle')?.checked ? '1' : '0');
                     loadKidGifts(kidId);
                 });
             }
@@ -545,7 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!me) { showToast('Sign in to claim', 'error'); return false; }
                         const { data, error } = await supabase
                           .from('kid_gifts')
-                          .update({ claimed_by: me, claimed_at: new Date().toISOString() })
+                          .update({ claimed_by: me })
                           .eq('id', idAttr)
                           .is('claimed_by', null)
                           .select('id');
@@ -567,12 +572,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         const { data: userData } = await supabase.auth.getUser();
                         const me = userData?.user?.id;
                         if (!me) { showToast('Sign in to unclaim', 'error'); return false; }
+                        // Validate that the id is a UUID before sending to DB
+                        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idAttr);
+                        if (!isUuid) { console.warn('Invalid gift id for unclaim:', idAttr); showToast('Could not unclaim (invalid id)', 'error'); return false; }
+                        // Prevent double-submits during re-renders
+                        if (btnEl) btnEl.disabled = true;
                         const { data, error } = await supabase
                           .from('kid_gifts')
                           .update({ claimed_by: null, claimed_at: null })
                           .eq('id', idAttr)
                           .eq('claimed_by', me)
                           .select('id');
+                        if (btnEl) btnEl.disabled = false;
                         if (error) {
                             const msg = String(error?.message || '').toLowerCase();
                             if (error.code === '42501' || msg.includes('row-level security') || msg.includes('permission')) {
@@ -584,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!data || data.length === 0) { showToast('Cannot unclaim (not yours)', 'error'); return false; }
                         showToast('Unclaimed');
                         return true;
-                    } catch (e) { console.error(e); showToast('Failed to unclaim', 'error'); return false; }
+                    } catch (e) { console.error(e); if (btnEl) btnEl.disabled = false; showToast('Failed to unclaim', 'error'); return false; }
                 }
                 selectedKidGifts.addEventListener('click', async (ev) => {
                     const claimBtn = ev.target.closest('.btn-claim-kid');
@@ -608,14 +619,21 @@ document.addEventListener('DOMContentLoaded', () => {
     async function renderAllClaimedAcrossKids() {
         try {
             const container = selectedKidGifts;
-            container.innerHTML = '';
+            container.innerHTML = '<p class="no-gifts-message">Loading your claimed gifts…</p>';
             const { getMyClaimedKidGifts } = await import('./supabase.js');
-            const list = await getMyClaimedKidGifts();
+            let from = 0; const pageSize = 50; let list = await getMyClaimedKidGifts({ from, limit: pageSize });
             if (!list || list.length === 0) {
-                container.innerHTML = '<p class="no-gifts-message">No claimed gifts yet.</p>';
+                container.innerHTML = '<p class="no-gifts-message">No claimed gifts yet. <button id="backToChildLists" class="btn-secondary" style="margin-left:8px">Back to child lists</button></p>';
+                const backBtn = document.getElementById('backToChildLists');
+                backBtn?.addEventListener('click', () => {
+                    const claimedAll = document.getElementById('claimedAllToggle');
+                    if (claimedAll) { claimedAll.checked = false; localStorage.setItem('ui_claimed_all', '0'); }
+                    loadKidGifts(kidSelector.value);
+                });
                 return;
             }
-            list.forEach(g => {
+            container.innerHTML = '';
+            function renderItem(g) {
                 const el = document.createElement('div');
                 const link = g.link || extractLinkFromName(g.name);
                 const hasLink = !!link;
@@ -626,14 +644,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     const titleText = String(g.name||'').replace(/\s*\((https?:[^)]+)\)\s*$/i,'').trim() || '(Link)';
                     el.className = 'gift-item link-card gift-claimed-mine';
                     el.innerHTML = `
-                    <div style="display:flex; gap:12px; align-items:center; width:100%;">\n                      <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">\n                        <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">\n                          <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">\n                        </div>\n                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">\n                          <h3 style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${titleText}${titleSuffix}<\/h3>\n                          <p class="gift-link" style="margin:0; color:#4b5563; font-size:13px;">${dom} ↗<\/p>\n                        <\/div>\n                      <\/a>\n                      <div class="gift-item-actions" style="margin-left:auto;">\n                        <span class="claimer-badge" title="You claimed this">You<\/span>\n                      <\/div>\n                    <\/div>`;
+                    <div style="display:flex; gap:12px; align-items:center; width:100%">\n                      <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">\n                        <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">\n                          <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">\n                        </div>\n                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">\n                          <h3 style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${titleText}${titleSuffix}<\/h3>\n                          <p class="gift-link" style="margin:0; color:#4b5563; font-size:13px;">${dom} ↗<\/p>\n                        <\/div>\n                      <\/a>\n                      <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">\n                        <span class="claimer-badge" title="You claimed this">You<\/span>\n                        <button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${g.kid_id}">${unclaimSvg()}<\/button>\n                      <\/div>\n                    <\/div>`;
                 } else {
                     el.className = 'gift-item compact gift-claimed-mine';
                     el.innerHTML = `
-                      <div class="gift-item-info">\n                        <h3>${g.name}${titleSuffix}<\/h3>\n                      <\/div>\n                      <div class="gift-item-actions" style="margin-left:auto;">\n                        <span class="claimer-badge" title="You claimed this">You<\/span>\n                      <\/div>`;
+                      <div class="gift-item-info">\n                        <h3>${g.name}${titleSuffix}<\/h3>\n                      <\/div>\n                      <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">\n                        <span class="claimer-badge" title="You claimed this">You<\/span>\n                        <button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${g.kid_id}">${unclaimSvg()}<\/button>\n                      <\/div>`;
                 }
                 container.appendChild(el);
-            });
+            }
+            list.forEach(renderItem);
+            if (list.length === pageSize) {
+                const loadMore = document.createElement('div');
+                loadMore.style.textAlign = 'center';
+                loadMore.style.margin = '12px 0 4px 0';
+                const btn = document.createElement('button');
+                btn.className = 'btn-secondary';
+                btn.textContent = 'Load more';
+                btn.addEventListener('click', async () => {
+                    btn.disabled = true;
+                    from += pageSize;
+                    const next = await getMyClaimedKidGifts({ from, limit: pageSize });
+                    next.forEach(renderItem);
+                    if (next.length < pageSize) loadMore.remove(); else btn.disabled = false;
+                });
+                loadMore.appendChild(btn);
+                container.appendChild(loadMore);
+            }
         } catch (e) {
             console.error('Failed to render all claimed gifts', e);
             selectedKidGifts.innerHTML = '<p class="no-gifts-message">Unable to load claimed gifts.</p>';
