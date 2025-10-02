@@ -43,6 +43,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let multiSelectMode = false;
     const selectedMyGiftIds = new Set();
 
+    // Kids multi-select (for deleting multiple suggestions in the selected child's list)
+    let kidsMultiSelectMode = false;
+    const selectedKidGiftIds = new Set();
+    let kidsMultiSelectToggle = null;
+    let kidsMultiSelectActions = null;
+    let kidsMultiSelectCount = null;
+    let kidsMultiDeleteBtn = null;
+    let kidsMultiCancelBtn = null;
+
     // SVG icon helpers for claim / unclaim (inline for portability)
     function claimSvg() {
         return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l5 5 11-11"/><path d="M2 12l5 5" opacity=".35"/></svg>';
@@ -422,6 +431,53 @@ document.addEventListener('DOMContentLoaded', () => {
             const giftsDb = await getKidGifts(kidId); // includes potential claimed_by
             const gifts = [ ...(giftsDb || []), ...getLocalKidGifts(kidId) ]; // merge local offline
             selectedKidGifts.innerHTML = '';
+            // Inject kids multi-select toolbar above list once
+            if (!document.getElementById('kidsMultiSelectBar')) {
+                const bar = document.createElement('div');
+                bar.id = 'kidsMultiSelectBar';
+                bar.style.display = 'flex';
+                bar.style.alignItems = 'center';
+                bar.style.gap = '12px';
+                bar.style.margin = '4px 0 12px 0';
+                bar.style.flexWrap = 'wrap';
+                bar.innerHTML = `
+                  <button type="button" id="kidsMultiSelectToggle" class="btn-secondary" style="font-size:13px; padding:6px 10px;">Select Multiple</button>
+                  <div id="kidsMultiSelectActions" style="display:none; gap:8px; align-items:center;">
+                    <span id="kidsMultiSelectCount" style="font-size:12px; opacity:.75;">0 selected</span>
+                    <button type="button" id="kidsMultiDeleteBtn" class="btn-delete" style="padding:6px 10px; font-size:13px;">Delete Selected</button>
+                    <button type="button" id="kidsMultiCancelBtn" class="btn-secondary" style="font-size:13px; padding:6px 10px;">Cancel</button>
+                  </div>`;
+                selectedKidGifts.parentElement?.insertBefore(bar, selectedKidGifts);
+                kidsMultiSelectToggle = document.getElementById('kidsMultiSelectToggle');
+                kidsMultiSelectActions = document.getElementById('kidsMultiSelectActions');
+                kidsMultiSelectCount = document.getElementById('kidsMultiSelectCount');
+                kidsMultiDeleteBtn = document.getElementById('kidsMultiDeleteBtn');
+                kidsMultiCancelBtn = document.getElementById('kidsMultiCancelBtn');
+                kidsMultiSelectToggle?.addEventListener('click', () => {
+                  kidsMultiSelectMode = true; selectedKidGiftIds.clear(); updateKidsMultiBar(); loadKidGifts(kidId);
+                });
+                kidsMultiCancelBtn?.addEventListener('click', () => {
+                  kidsMultiSelectMode = false; selectedKidGiftIds.clear(); updateKidsMultiBar(); loadKidGifts(kidId);
+                });
+                kidsMultiDeleteBtn?.addEventListener('click', async () => {
+                  if (!selectedKidGiftIds.size) { showToast('No gifts selected', 'error'); return; }
+                  const ok = await confirmDialog({ title: 'Delete Suggestions', message: `Delete ${selectedKidGiftIds.size} selected item(s)?`, confirmText: 'Delete' });
+                  if (!ok) return;
+                  let failures = 0;
+                  for (const id of Array.from(selectedKidGiftIds)) {
+                    try {
+                      if (String(id).startsWith('local-kid-')) {
+                        const enc = String(id).substring(String(id).indexOf(kidId + '-') + (kidId + '-').length);
+                        deleteLocalKidGift(kidId, decodeURIComponent(enc));
+                      } else {
+                        await deleteKidGift(id);
+                      }
+                    } catch { failures++; }
+                  }
+                  if (failures) showToast(`Deleted with ${failures} error(s)`, 'error'); else showToast('Deleted selected');
+                  kidsMultiSelectMode = false; selectedKidGiftIds.clear(); updateKidsMultiBar(); loadKidGifts(kidId);
+                });
+            }
             // Insert filter toggles once
             if (!document.getElementById('unclaimedFilterToggle')) {
                 const filterWrap = document.createElement('div');
@@ -507,6 +563,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     el.innerHTML = `
                       <div class="gift-item-info">\n                        <h3>${g.name}<\/h3>\n                      <\/div>\n                      <div class="gift-item-actions" style="margin-left:auto;">\n                        ${claimerLabel && !isMine ? claimerLabel : ''}\n                        ${actionHtml}\n                        <button class="btn-icon btn-delete-kid-dev" aria-label="Delete suggestion" data-id="${g.id}" data-kid="${kidId}">${deleteSvg()}<\/button>\n                      <\/div>`;
+                }
+                if (kidsMultiSelectMode) {
+                  const box = document.createElement('span');
+                  box.className = 'multi-select-checkbox';
+                  const idStr = String(g.id);
+                  if (selectedKidGiftIds.has(idStr)) { el.dataset.selected='true'; box.textContent='✓'; }
+                  el.prepend(box);
+                  el.tabIndex = 0;
+                  el.addEventListener('click', (ev) => {
+                    if (ev.target.closest('.gift-item-actions')) return;
+                    toggleKidMultiSelection(idStr, el);
+                  }, { capture: true });
+                  el.addEventListener('keydown', (ev) => {
+                    if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); toggleKidMultiSelection(idStr, el); }
+                  });
                 }
                 selectedKidGifts.appendChild(el);
             });
@@ -606,6 +677,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 kidsClaimBound = true;
             }
         } catch (e) { console.error('Failed to load kid gifts', e); }
+    }
+
+    function toggleKidMultiSelection(idStr, el) {
+        if (!kidsMultiSelectMode) return;
+        if (selectedKidGiftIds.has(idStr)) {
+            selectedKidGiftIds.delete(idStr);
+            el.removeAttribute('data-selected');
+            const box = el.querySelector('.multi-select-checkbox'); if (box) box.textContent='';
+        } else {
+            selectedKidGiftIds.add(idStr);
+            el.dataset.selected='true';
+            const box = el.querySelector('.multi-select-checkbox'); if (box) box.textContent='✓';
+        }
+        updateKidsMultiBar();
+    }
+
+    function updateKidsMultiBar() {
+        if (!kidsMultiSelectToggle || !kidsMultiSelectActions) return;
+        if (kidsMultiSelectMode) {
+            kidsMultiSelectActions.style.display = 'inline-flex';
+            kidsMultiSelectToggle.style.display = 'none';
+            document.body.classList.add('multi-select-mode');
+        } else {
+            kidsMultiSelectActions.style.display = 'none';
+            kidsMultiSelectToggle.style.display = 'inline-block';
+            document.body.classList.remove('multi-select-mode');
+        }
+        if (kidsMultiSelectCount) kidsMultiSelectCount.textContent = `${selectedKidGiftIds.size} selected`;
     }
 
     async function renderAllClaimedAcrossKids() {
