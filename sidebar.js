@@ -548,14 +548,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const { data: userData } = await supabase.auth.getUser();
                         const me = userData?.user?.id;
                         if (!me) { showToast('Sign in to claim', 'error'); return false; }
-                        const { data, error } = await supabase
-                          .from('kid_gifts')
-                          .update({ claimed_by: me, claimed_at: new Date().toISOString() })
-                          .eq('id', idAttr)
-                          .is('claimed_by', null)
-                          .select('id');
+                        // Use RPC to claim atomically server-side
+                        const { data, error } = await supabase.rpc('claim_kid_gift', { p_id: idAttr });
                         if (error) throw error;
-                        if (!data || data.length === 0) { showToast('Already claimed by someone else', 'error'); return false; }
+                        if (!data) { showToast('Already claimed by someone else', 'error'); return false; }
                         showToast('Claimed');
                         return true;
                     } catch (e) { console.error(e); showToast('Failed to claim', 'error'); return false; }
@@ -577,11 +573,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!isUuid) { console.warn('Invalid gift id for unclaim:', idAttr); showToast('Could not unclaim (invalid id)', 'error'); return false; }
                         // Prevent double-submits during re-renders
                         if (btnEl) btnEl.disabled = true;
-                        const { data, error } = await supabase
-                          .from('kid_gifts')
-                          .update({ claimed_by: null, claimed_at: null })
-                          .eq('id', idAttr)
-                          .select('id');
+                        // Use RPC to unclaim atomically server-side
+                        const { data, error } = await supabase.rpc('unclaim_kid_gift', { p_id: idAttr });
                         if (btnEl) btnEl.disabled = false;
                         if (error) {
                             const msg = String(error?.message || '').toLowerCase();
@@ -591,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                             throw error;
                         }
-                        if (!data || data.length === 0) { showToast('Cannot unclaim (not yours)', 'error'); return false; }
+                        if (!data) { showToast('Cannot unclaim (not yours)', 'error'); return false; }
                         showToast('Unclaimed');
                         return true;
                     } catch (e) { console.error(e); if (btnEl) btnEl.disabled = false; showToast('Failed to unclaim', 'error'); return false; }
