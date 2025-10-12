@@ -450,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch {}
             const giftsDb = await getKidGifts(kidId); // includes potential claimed_by
-            const gifts = [ ...(giftsDb || []), ...getLocalKidGifts(kidId) ]; // merge local offline
+            const gifts = giftsDb || [];
             selectedKidGifts.innerHTML = '';
             // Inject kids multi-select toolbar above list once
             if (!document.getElementById('kidsMultiSelectBar')) {
@@ -486,14 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   if (!ok) return;
                   let failures = 0;
                   for (const id of Array.from(selectedKidGiftIds)) {
-                    try {
-                      if (String(id).startsWith('local-kid-')) {
-                        const enc = String(id).substring(String(id).indexOf(kidId + '-') + (kidId + '-').length);
-                        deleteLocalKidGift(kidId, decodeURIComponent(enc));
-                      } else {
-                        await deleteKidGift(id);
-                      }
-                    } catch { failures++; }
+                    try { await deleteKidGift(id); } catch { failures++; }
                   }
                   if (failures) showToast(`Deleted with ${failures} error(s)`, 'error'); else showToast('Deleted selected');
                   kidsMultiSelectMode = false; selectedKidGiftIds.clear(); updateKidsMultiBar(); loadKidGifts(kidId);
@@ -529,7 +522,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const el = document.createElement('div');
                 const link = g.link || extractLinkFromName(g.name);
                 const hasLink = !!link;
-                const isLocal = String(g.id).startsWith('local-kid-');
                 const isClaimed = !!g.claimed_by;
                 const isMine = isClaimed && me && String(g.claimed_by) === String(me);
                 // No unclaimed-only filtering; show items regardless of claim status in per-kid view
@@ -538,23 +530,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 else if (isClaimed) itemStateClass = 'gift-claimed-other';
                 el.className = `gift-item ${itemStateClass} ${hasLink ? 'link-card' : 'compact'}`;
                 let claimerLabel = '';
-                if (!isLocal && isClaimed && !isMine) {
-                    // try to show claimer name (best effort, we might not have it in g)
-                    // attempt to parse joined profile if present: g.profiles?.full_name
-                    const full = g.profiles?.full_name || g.full_name || '';
-                    const shortened = full ? full.split(/\s+/).slice(0,2).map(p=>p.charAt(0).toUpperCase()+p.slice(1)).join(' ') : 'Someone';
-                    claimerLabel = `<span class=\"claimer-badge other\" title=\"${full || 'Claimed by another user'}\">${shortened || 'Claimed'}<\/span>`;
-                } else if (!isLocal && isMine) {
-                    claimerLabel = `<span class=\"claimer-badge\" title=\"You claimed this\">You</span>`;
-                } else if (isLocal && isClaimed) {
-                    claimerLabel = `<span class=\"claimer-badge\" title=\"Local only claim (not synced)\">Local</span>`;
+                if (isClaimed && !isMine) {
+                    const full = g.full_name || '';
+                    const shortened = full ? full.split(/\s+/).slice(0, 2).join(' ') : 'Someone';
+                    claimerLabel = `<span class="claimer-badge other" title="${full || 'Claimed by another user'}">${shortened}</span>`;
+                } else if (isClaimed && isMine) {
+                    claimerLabel = `<span class="claimer-badge" title="You claimed this">You</span>`;
                 }
                 const actionHtml = (() => {
-                    if (isLocal) {
-                        return !isClaimed
-                          ? `<button class="btn-icon btn-claim-kid claim-btn" aria-label="Claim gift: ${g.name}" data-id="${g.id}" data-kid="${kidId}">${claimSvg()}</button>`
-                          : `<button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${kidId}">${unclaimSvg()}</button>`;
-                    }
                     if (!isClaimed) {
                         return `<button class="btn-icon btn-claim-kid claim-btn" aria-label="Claim gift: ${g.name}" data-id="${g.id}" data-kid="${kidId}">${claimSvg()}</button>`;
                     }
@@ -599,12 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const ok = await confirmDialog({ title: 'Delete Suggestion', message: 'Delete this suggestion?', confirmText: 'Delete' });
                     if (!ok) return;
                     try {
-                        if (id.startsWith('local-kid-')) {
-                            const enc = id.substring(id.indexOf(currentKidId + '-') + (currentKidId + '-').length);
-                            deleteLocalKidGift(currentKidId, decodeURIComponent(enc));
-                        } else {
-                            await deleteKidGift(id);
-                        }
+                        await deleteKidGift(id);
                         showToast('Deleted');
                         loadKidGifts(currentKidId);
                     } catch (e) { showToast('Failed to delete', 'error'); }
@@ -616,18 +594,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!kidsClaimBound) {
                 // helpers
                 async function claimKidGift(idAttr, currentKidId, btnEl) {
-                    if (idAttr.startsWith('local-kid-')) {
-                        const enc = idAttr.substring(idAttr.indexOf(currentKidId + '-') + (currentKidId + '-').length);
-                        const raw = decodeURIComponent(enc);
-                        const set = getLocalClaimSet(currentKidId); set.add(raw); saveLocalClaimSet(currentKidId, set); showToast('Claimed (local)');
-                        return true;
-                    }
                     try {
                         const { supabase } = await import('./supabase.js');
                         const { data: userData } = await supabase.auth.getUser();
                         const me = userData?.user?.id;
                         if (!me) { showToast('Sign in to claim', 'error'); return false; }
-                        // Use RPC to claim atomically server-side
                         const { data, error } = await supabase.rpc('claim_kid_gift', { p_id: idAttr });
                         if (error) throw error;
                         if (!data) { showToast('Already claimed by someone else', 'error'); return false; }
@@ -636,33 +607,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch (e) { console.error(e); showToast('Failed to claim', 'error'); return false; }
                 }
                 async function unclaimKidGift(idAttr, currentKidId, btnEl) {
-                    if (idAttr.startsWith('local-kid-')) {
-                        const enc = idAttr.substring(idAttr.indexOf(currentKidId + '-') + (currentKidId + '-').length);
-                        const raw = decodeURIComponent(enc);
-                        const set = getLocalClaimSet(currentKidId); set.delete(raw); saveLocalClaimSet(currentKidId, set); showToast('Unclaimed (local)');
-                        return true;
-                    }
                     try {
                         const { supabase } = await import('./supabase.js');
                         const { data: userData } = await supabase.auth.getUser();
                         const me = userData?.user?.id;
                         if (!me) { showToast('Sign in to unclaim', 'error'); return false; }
-                        // Validate that the id is a UUID before sending to DB
                         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idAttr);
-                        if (!isUuid) { console.warn('Invalid gift id for unclaim:', idAttr); showToast('Could not unclaim (invalid id)', 'error'); return false; }
-                        // Prevent double-submits during re-renders
+                        if (!isUuid) { showToast('Could not unclaim (invalid id)', 'error'); return false; }
                         if (btnEl) btnEl.disabled = true;
-                        // Use RPC to unclaim atomically server-side
                         const { data, error } = await supabase.rpc('unclaim_kid_gift', { p_id: idAttr });
                         if (btnEl) btnEl.disabled = false;
-                        if (error) {
-                            const msg = String(error?.message || '').toLowerCase();
-                            if (error.code === '42501' || msg.includes('row-level security') || msg.includes('permission')) {
-                                showToast('Cannot unclaim (not yours)', 'error');
-                                return false;
-                            }
-                            throw error;
-                        }
+                        if (error) throw error;
                         if (!data) { showToast('Cannot unclaim (not yours)', 'error'); return false; }
                         showToast('Unclaimed');
                         return true;
