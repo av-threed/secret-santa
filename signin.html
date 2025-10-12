@@ -14,33 +14,46 @@
     .error { color: #B91C1C; margin: 10px 0; font-weight: bold; }
   </style>
   <script type="module">
-    import { handleSignIn, sendPasswordReset } from './auth.js';
-    document.addEventListener('DOMContentLoaded', () => {
-      const form = document.getElementById('signinForm');
-      const msg = document.getElementById('message');
-      const forgotBtn = document.getElementById('forgotBtn');
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        msg.textContent = '';
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
-        const { error } = await handleSignIn(email, password);
-        if (error) {
-          msg.textContent = error.message || 'Sign in failed';
-          msg.className = 'error';
-        } else {
-          window.location.href = 'index.html';
-        }
-      });
-      forgotBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        msg.textContent = '';
-        const email = document.getElementById('email').value.trim();
-        const { error } = await sendPasswordReset(email);
-        msg.textContent = error ? (error.message || 'Failed to send reset email') : 'Password reset email sent. Check your inbox.';
-        msg.className = error ? 'error' : '';
-      });
+  import { supabase, initAuthRouteGuards } from './supabase.js';
+  import { handleSignIn, sendPasswordReset } from './auth.js';
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    initAuthRouteGuards();
+
+    // If a magic/invite link already signed the user in, go to the app
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      window.location.replace('index.html');
+      return;
+    }
+
+    const form = document.getElementById('signinForm');
+    const msg = document.getElementById('message');
+    const forgotBtn = document.getElementById('forgotBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = '';
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const { error } = await handleSignIn(email, password);
+      if (error) {
+        msg.textContent = error.message || 'Sign in failed';
+        msg.className = 'error';
+      } else {
+        window.location.href = 'index.html';
+      }
     });
+
+    forgotBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      msg.textContent = '';
+      const email = document.getElementById('email').value.trim();
+      const { error } = await sendPasswordReset(email);
+      msg.textContent = error ? (error.message || 'Failed to send reset email') : 'Password reset email sent. Check your inbox.';
+      msg.className = error ? 'error' : '';
+    });
+  });
   </script>
 </head>
 <body>
