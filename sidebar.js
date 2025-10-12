@@ -371,15 +371,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             gifts.forEach(gift => {
                 const el = document.createElement('div');
-                el.className = 'gift-item';
-                el.innerHTML = `
-                    <div class="gift-item-info">
-                        <h3>${gift.name}</h3>
+                const link = gift.link || extractLinkFromName(gift.name);
+                const hasLink = !!link;
+                if (hasLink) {
+                    const dom = domainFromUrl(link);
+                    const titleText = String(gift.name || '')
+                        .replace(/\s*\((https?:[^)]+)\)\s*$/i, '')
+                        .trim() || '(Link)';
+                    el.className = 'gift-item link-card';
+                    // Entire card is a link
+                    el.innerHTML = `
+                      <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; width:100%; min-width:0;">
+                        <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                          <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">
+                        </div>
+                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">
+                          <h3 style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${titleText}</h3>
+                          <p class="gift-link" style="margin:0; color:#4b5563; font-size:13px; overflow-wrap:anywhere;">${dom} ↗</p>
+                          ${gift.price ? `<p class="gift-price" style="margin-top:6px;">Price: ${gift.price}</p>` : ''}
+                          ${gift.notes ? `<p class="gift-notes" style="margin-top:4px;">${gift.notes}</p>` : ''}
+                        </div>
+                      </a>`;
+                } else {
+                    el.className = 'gift-item compact';
+                    el.innerHTML = `
+                      <div class="gift-item-info">
+                        <h3 style="overflow-wrap:anywhere; word-break:break-word;">${gift.name}</h3>
                         ${gift.price ? `<p class="gift-price">Price: ${gift.price}</p>` : ''}
-                        ${gift.link ? `<p class="gift-link"><a href="${gift.link}" target="_blank">View Item</a></p>` : ''}
                         ${gift.notes ? `<p class="gift-notes">${gift.notes}</p>` : ''}
-                    </div>
-                `;
+                      </div>`;
+                }
                 recipientGiftsList.appendChild(el);
             });
         } catch (e) {
@@ -817,9 +838,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (modal === setRecipientModal) {
             const locked = await isAssignmentsLocked();
-            recipientStatus.textContent = locked ? 'Assignments are locked. Changes are disabled.' : '';
+            // Build status message and disable controls if locked
+            let statusMsg = locked ? 'Assignments are locked. Changes are disabled.' : '';
             saveRecipientBtn.disabled = locked;
+            if (recipientSelect) recipientSelect.disabled = locked;
+            // Populate options, then preselect current recipient if one exists
             await populateRecipientOptions();
+            try {
+                const currentRecipientId = await getRecipientForBuyer();
+                if (currentRecipientId) {
+                    // Ensure the current recipient exists in the options list
+                    let opt = Array.from(recipientSelect.options).find(o => String(o.value) === String(currentRecipientId));
+                    if (!opt) {
+                        const prof = await getProfile(currentRecipientId).catch(() => ({ full_name: null }));
+                        opt = document.createElement('option');
+                        opt.value = currentRecipientId;
+                        opt.textContent = prof?.full_name || currentRecipientId;
+                        recipientSelect.appendChild(opt);
+                    }
+                    recipientSelect.value = currentRecipientId;
+                    const displayName = opt?.textContent || '';
+                    statusMsg = statusMsg ? `${statusMsg} Currently selected: ${displayName}.` : `Currently selected: ${displayName}.`;
+                }
+            } catch (_) { /* best-effort preselect */ }
+            recipientStatus.textContent = statusMsg;
         }
         if (modal === settingsModal) {
             const s = getSettings();
