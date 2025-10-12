@@ -838,9 +838,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (modal === setRecipientModal) {
             const locked = await isAssignmentsLocked();
-            recipientStatus.textContent = locked ? 'Assignments are locked. Changes are disabled.' : '';
+            // Build status message and disable controls if locked
+            let statusMsg = locked ? 'Assignments are locked. Changes are disabled.' : '';
             saveRecipientBtn.disabled = locked;
+            if (recipientSelect) recipientSelect.disabled = locked;
+            // Populate options, then preselect current recipient if one exists
             await populateRecipientOptions();
+            try {
+                const currentRecipientId = await getRecipientForBuyer();
+                if (currentRecipientId) {
+                    // Ensure the current recipient exists in the options list
+                    let opt = Array.from(recipientSelect.options).find(o => String(o.value) === String(currentRecipientId));
+                    if (!opt) {
+                        const prof = await getProfile(currentRecipientId).catch(() => ({ full_name: null }));
+                        opt = document.createElement('option');
+                        opt.value = currentRecipientId;
+                        opt.textContent = prof?.full_name || currentRecipientId;
+                        recipientSelect.appendChild(opt);
+                    }
+                    recipientSelect.value = currentRecipientId;
+                    const displayName = opt?.textContent || '';
+                    statusMsg = statusMsg ? `${statusMsg} Currently selected: ${displayName}.` : `Currently selected: ${displayName}.`;
+                }
+            } catch (_) { /* best-effort preselect */ }
+            recipientStatus.textContent = statusMsg;
         }
         if (modal === settingsModal) {
             const s = getSettings();
