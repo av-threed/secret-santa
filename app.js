@@ -1,7 +1,53 @@
-import { addGiftToList, getCurrentUser, getKids, findOrCreateKid, addKidGift, getCurrentYear } from './supabase.js';
+import { addGiftToList, getCurrentUser, getKids, findOrCreateKid, addKidGift, getCurrentYear, signOut as supaSignOut, supabase, initAuthRouteGuards } from './supabase.js';
 import { inputDialog } from './ui.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    (async () => {
+        initAuthRouteGuards();
+
+        // Optional: force sign-out when sharing onboarding links like ?new=1
+        try {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('new') === '1') {
+                await supaSignOut();
+            }
+        } catch {}
+        
+        // Lightweight "Signed in as" indicator with Sign Out
+        try {
+            const { data: userData } = await supabase.auth.getUser();
+            const email = userData?.user?.email || '';
+            if (email) {
+                const chip = document.createElement('div');
+                chip.style.position = 'fixed';
+                chip.style.top = '10px';
+                chip.style.right = '10px';
+                chip.style.padding = '6px 10px';
+                chip.style.background = '#0E5A3A';
+                chip.style.color = '#fffbe7';
+                chip.style.borderRadius = '14px';
+                chip.style.fontSize = '12px';
+                chip.style.zIndex = '1000';
+                chip.style.display = 'flex';
+                chip.style.gap = '8px';
+                chip.style.alignItems = 'center';
+                chip.textContent = `Signed in as ${email}`;
+                const btn = document.createElement('button');
+                btn.textContent = 'Sign Out';
+                btn.style.all = 'unset';
+                btn.style.cursor = 'pointer';
+                btn.style.padding = '4px 6px';
+                btn.style.borderRadius = '10px';
+                btn.style.background = '#0B4A2F';
+                btn.style.color = '#fffbe7';
+                btn.addEventListener('click', async () => {
+                    try { await supaSignOut(); window.location.href = 'signin.html'; } catch {}
+                });
+                chip.appendChild(btn);
+                document.body.appendChild(chip);
+            }
+        } catch {}
+    })();
     const adultGiftForm = document.getElementById('adultGiftForm');
     const addChildBtn = document.getElementById('addChildBtn');
     const childSelect = document.getElementById('childSelect');

@@ -301,3 +301,23 @@ export async function inviteUser(email, fullName) {
     if (error) throw error;
     return data;
 }
+
+export function cleanAuthHash() {
+    try {
+        const url = new URL(window.location.href);
+        if (url.hash && /access_token|refresh_token|provider_token|type=/.test(url.hash)) {
+            history.replaceState({}, document.title, url.pathname + url.search);
+        }
+    } catch {}
+}
+
+export function initAuthRouteGuards() {
+    try {
+        // Scrub immediately on load in case a user copies a tokenized URL
+        cleanAuthHash();
+        // Scrub again when Supabase finishes processing a magic/invite link
+        supabase.auth.onAuthStateChange((event) => {
+            if (event === 'SIGNED_IN') cleanAuthHash();
+        });
+    } catch {}
+}
