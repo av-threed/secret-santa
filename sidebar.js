@@ -5,6 +5,8 @@ import { confirmDialog, showToast, editGiftDialog } from './ui.js';
 // Sidebar functionality
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.querySelector('.sidebar');
+    const mobileBtn = document.getElementById('mobileMenuBtn');
+    const backdrop = document.getElementById('sidebarBackdrop');
     const appBar = document.querySelector('.app-bar');
     const sidebarPin = document.getElementById('sidebarPin');
     const myGiftListBtn = document.getElementById('myGiftList');
@@ -165,6 +167,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // --- Mobile drawer controls ---
+    function openDrawer() {
+        if (!sidebar) return;
+        sidebar.classList.add('open');
+        backdrop?.classList.add('active');
+    }
+    function closeDrawer() {
+        sidebar?.classList.remove('open');
+        backdrop?.classList.remove('active');
+    }
+    mobileBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (sidebar?.classList.contains('open')) closeDrawer(); else openDrawer();
+    });
+    backdrop?.addEventListener('click', closeDrawer);
 
     // Load and display gifts
     async function loadMyGifts() {
@@ -895,6 +913,17 @@ document.addEventListener('DOMContentLoaded', () => {
         await openModal(settingsModal);
     });
 
+    // Close drawer when a sidebar link is clicked (mobile UX)
+    document.querySelectorAll('.sidebar-button, .sidebar-signout').forEach(el => {
+        el.addEventListener('click', () => {
+            // Only relevant on mobile widths, but harmless otherwise
+            if (sidebar?.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                backdrop?.classList.remove('active');
+            }
+        });
+    });
+
     settingsForm?.addEventListener('submit', (e) => {
         e.preventDefault();
         const s = getSettings();
@@ -946,8 +975,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Close modals with Escape key
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && currentModal) {
-            closeModal(currentModal);
+        if (e.key === 'Escape') {
+            if (currentModal) {
+                closeModal(currentModal);
+                return;
+            }
+            // Also close mobile drawer on Esc
+            if (sidebar?.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                backdrop?.classList.remove('active');
+            }
         }
     });
 
