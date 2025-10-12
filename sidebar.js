@@ -171,6 +171,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Mobile drawer controls ---
     function openDrawer() {
         if (!sidebar) return;
+        // Optional: close any open modal so the drawer doesn't share focus layers
+        document.querySelectorAll('.modal.active').forEach(m => {
+            m.classList.remove('active');
+            m.style.display = 'none';
+        });
         sidebar.classList.add('open');
         backdrop?.classList.add('active');
     }

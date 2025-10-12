@@ -967,6 +967,7 @@ button:hover {
   .sidebar.open {
     transform: translateX(0);
     box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    z-index: 1100; /* above modal overlay */
   }
   /* Disable hover expansion on touch */
   .sidebar:hover { width: var(--sidebar-width); }
@@ -986,17 +987,17 @@ button:hover {
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,.4);
-    z-index: 150; /* below sidebar (200), above content */
+    z-index: 1090; /* just below sidebar, above modal overlay */
     display: none;
   }
   .sidebar-backdrop.active { display: block; }
 }
 
-/* Hamburger button */
+/* Hamburger button: always on top, even over modals */
 .hamburger {
-  position: absolute;
+  position: fixed;
   left: 12px;
-  top: 12px;
+  top: calc(env(safe-area-inset-top, 0) + 12px);
   width: 40px;
   height: 40px;
   border-radius: 8px;
@@ -1005,6 +1006,9 @@ button:hover {
   display: none;
   align-items: center;
   justify-content: center;
+  z-index: 1101; /* higher than .modal (1001) */
+  box-shadow: 0 4px 10px rgba(0,0,0,.25);
+  touch-action: manipulation;
 }
 @media (max-width: 900px) {
   .hamburger { display: inline-flex; }
