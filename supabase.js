@@ -292,3 +292,12 @@ export async function upsertMyRecipient(recipientUserId) {
     if (error) throw error;
     return data;
 }
+
+// Admin helpers
+export async function inviteUser(email, fullName) {
+    const { data, error } = await supabase.functions.invoke('invite-user', {
+        body: { email, fullName }
+    });
+    if (error) throw error;
+    return data;
+}
