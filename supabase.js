@@ -63,23 +63,33 @@ export async function getKids() {
 }
 
 export async function getKidGifts(kidId) {
-    // Try with relation; if that fails (e.g., metadata mismatch), fall back to simple select
-    let query = supabase.from('kid_gifts')
-        .select('*, kids(name)')
+    let { data, error } = await supabase
+        .from('kid_gifts')
+        .select('id, name, link, notes, price, kid_id, created_by, claimed_by, claimed_at, kids(name)')
         .eq('kid_id', kidId)
         .order('created_at', { ascending: false });
-    let { data, error } = await query;
-    if (error) {
-        // Fallback without join
-        const res = await supabase
-            .from('kid_gifts')
-            .select('*')
-            .eq('kid_id', kidId)
-            .order('created_at', { ascending: false });
-        if (res.error) throw res.error;
-        return res.data;
-    }
-    return data;
+    if (error) throw error;
+    let rows = data || [];
+
+    // Enrich with claimer full names (from profiles)
+    try {
+        const claimerIds = Array.from(new Set(rows.map(r => r.claimed_by).filter(Boolean)));
+        if (claimerIds.length > 0) {
+            const { data: profs, error: profErr } = await supabase
+                .from('profiles')
+                .select('id, full_name')
+                .in('id', claimerIds);
+            if (!profErr && profs) {
+                const idToName = Object.fromEntries(profs.map(p => [p.id, p.full_name || null]));
+                rows = rows.map(r => {
+                    const nm = r.claimed_by ? idToName[r.claimed_by] : null;
+                    return nm ? { ...r, full_name: nm } : r;
+                });
+            }
+        }
+    } catch (_) { /* best-effort enrichment */ }
+
+    return rows;
 }
 
 export async function findOrCreateKid(kidName) {
