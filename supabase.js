@@ -63,31 +63,28 @@ export async function getKids() {
 }
 
 export async function getKidGifts(kidId) {
-    let { data, error } = await supabase
+    // Plain select (no relational embed to avoid PGRST201 ambiguity)
+    const { data, error } = await supabase
         .from('kid_gifts')
-        .select('id, name, link, notes, price, kid_id, created_by, claimed_by, claimed_at, kids(name)')
+        .select('id, name, link, notes, price, kid_id, created_by, claimed_by, claimed_at')
         .eq('kid_id', kidId)
         .order('created_at', { ascending: false });
     if (error) throw error;
+
     let rows = data || [];
 
-    // Enrich with claimer full names (from profiles)
+    // Best-effort enrichment: add claimer full_name from profiles (optional)
     try {
         const claimerIds = Array.from(new Set(rows.map(r => r.claimed_by).filter(Boolean)));
-        if (claimerIds.length > 0) {
-            const { data: profs, error: profErr } = await supabase
+        if (claimerIds.length) {
+            const { data: profs } = await supabase
                 .from('profiles')
                 .select('id, full_name')
                 .in('id', claimerIds);
-            if (!profErr && profs) {
-                const idToName = Object.fromEntries(profs.map(p => [p.id, p.full_name || null]));
-                rows = rows.map(r => {
-                    const nm = r.claimed_by ? idToName[r.claimed_by] : null;
-                    return nm ? { ...r, full_name: nm } : r;
-                });
-            }
+            const idToName = Object.fromEntries((profs || []).map(p => [p.id, p.full_name || null]));
+            rows = rows.map(r => (r.claimed_by && idToName[r.claimed_by]) ? { ...r, full_name: idToName[r.claimed_by] } : r);
         }
-    } catch (_) { /* best-effort enrichment */ }
+    } catch (_) { /* non-fatal */ }
 
     return rows;
 }
