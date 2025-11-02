@@ -2,7 +2,7 @@
 import { supabase, inviteUser } from './supabase.js';
 import { confirmDialog, showToast, inputDialog, editGiftDialog } from './ui.js';
 
-export const ADMIN_EMAIL = 'AntonioVillasenor08@gmail.com';
+export const ADMIN_EMAIL = 'antonio.villasenor08@gmail.com';
 
 async function requireAdmin() {
   const { data: userData } = await supabase.auth.getUser();

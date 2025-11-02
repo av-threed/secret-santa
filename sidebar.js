@@ -1048,7 +1048,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const { supabase } = await import('./supabase.js');
             const { data: userData } = await supabase.auth.getUser();
             const email = String(userData?.user?.email || '').toLowerCase();
-            const adminEmail = 'antoniovillasenor08@gmail.com';
+            const adminEmail = 'antonio.villasenor08@gmail.com';
             if (email && email === adminEmail) {
                 adminPortalBtn.style.display = '';
                 adminPortalBtn.addEventListener('click', (e) => { e.preventDefault(); window.location.href = 'admin.html'; });
