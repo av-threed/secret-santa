@@ -446,15 +446,39 @@
       }
     });
 
-    // Kids gift suggestions submit (moved here from app.js)
+    // Kids gift suggestions submit (supports Idea + Link modes)
     kidsForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const kidId = childSelect.value;
       if (!kidId) { showToast('Select a child', 'error'); return; }
-      const raw = kidsTextarea.value;
-      const lines = (raw || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-      if (!lines.length) { showToast('Nothing to add', 'error'); return; }
+
+      const mode = getSelectedKidsMode();
+
       try {
+        if (mode === 'link') {
+          const rawUrl = (kidUrlInput.value || '').trim();
+          if (!rawUrl) { showToast('Enter a product link', 'error'); return; }
+          const normalized = normalizeUrl(rawUrl);
+          if (!normalized) {
+            showToast('Enter a valid http/https link', 'error');
+            kidUrlInput.classList.add('url-invalid');
+            return;
+          }
+          kidUrlInput.classList.remove('url-invalid');
+          const caption = (kidCaptionInput.value || '').trim();
+          const name = caption || new URL(normalized).hostname.replace(/^www\./, '');
+          await addKidGift(kidId, { name, link: normalized });
+          kidUrlInput.value = '';
+          kidCaptionInput.value = '';
+          showToast('Link added');
+          window.dispatchEvent(new CustomEvent('kid-gifts-updated', { detail: { kidId } }));
+          return;
+        }
+
+        // Idea mode (existing behavior)
+        const raw = kidsTextarea.value;
+        const lines = (raw || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        if (!lines.length) { showToast('Nothing to add', 'error'); return; }
         let successCount = 0;
         for (const line of lines) {
           try {
@@ -462,22 +486,16 @@
             successCount++;
           } catch (err) {
             const msg = String(err?.message || '').toLowerCase();
-            if (err?.code === '23505' || msg.includes('duplicate key') || msg.includes('already exists')) {
-              continue; // ignore duplicates per unique index
-            }
+            if (err?.code === '23505' || msg.includes('duplicate key') || msg.includes('already exists')) continue;
             throw err;
           }
         }
         kidsTextarea.value = '';
         window.dispatchEvent(new CustomEvent('kid-gifts-updated', { detail: { kidId } }));
-        if (successCount > 0) {
-          showToast('Suggestions added');
-        } else {
-          showToast('No new suggestions (duplicates ignored)');
-        }
-      } catch (e) {
-        console.error('Failed to add kid suggestions', e);
-        showToast(`Failed to add suggestions: ${e.message || 'Unknown error'}`, 'error');
+        showToast(successCount > 0 ? 'Suggestions added' : 'No new suggestions (duplicates ignored)');
+      } catch (e2) {
+        console.error('Failed to add kid suggestions', e2);
+        showToast(`Failed to add suggestions: ${e2.message || 'Unknown error'}`, 'error');
       }
     });
 
