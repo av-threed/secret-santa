@@ -10,91 +10,103 @@
   <script src="admin.js" type="module"></script>
 </head>
 <body>
-  <main class="main-content" style="max-width:1100px; margin:0 auto; padding:16px;">
-    <div class="welcome-banner">
-      <h1 class="brand-title">Admin Portal</h1>
-      <span class="helper-text">Manage users, kids, gifts, assignments and settings</span>
-    </div>
-
-    <section style="margin-top:16px;">
-      <h2>Users</h2>
-      <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin:8px 0 12px 0;">
-        <div>
-          <label for="adminInviteEmail">Email</label>
-          <input id="adminInviteEmail" type="email" placeholder="user@example.com" required>
-        </div>
-        <div>
-          <label for="adminInviteName">Full name (optional)</label>
-          <input id="adminInviteName" type="text" placeholder="Jane Doe">
-        </div>
-        <button id="adminInviteBtn" class="btn-primary">Invite User</button>
+  <main class="main-content">
+    <div class="admin-container">
+      <div class="welcome-banner">
+        <h1 class="brand-title">Admin Portal</h1>
+        <span class="helper-text">Manage users, kids, gifts, assignments and settings</span>
       </div>
-      <div style="overflow:auto;">
-        <table class="table" id="adminUsersTable" style="min-width:680px;">
-          <thead>
-            <tr><th>ID</th><th>Full Name</th><th>Email</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
 
-    <section style="margin-top:24px;">
-      <h2>Kids</h2>
-      <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin:8px 0 12px 0;">
-        <div>
-          <label for="adminNewKidName">Add child</label>
-          <input id="adminNewKidName" type="text" placeholder="e.g., Emma">
-        </div>
-        <button id="adminAddKidBtn" class="btn-primary">Add Child</button>
-      </div>
-      <ul id="adminKidsList" class="list" style="margin:0; padding:0; list-style:none;"></ul>
-    </section>
+      <nav class="admin-subnav">
+        <a class="subnav-chip" href="#users">Users</a>
+        <a class="subnav-chip" href="#kids">Kids</a>
+        <a class="subnav-chip" href="#kid-gifts">Kid Gifts</a>
+        <a class="subnav-chip" href="#assign">Assignments</a>
+      </nav>
 
-    <section style="margin-top:24px;">
-      <h2>Kid Gifts</h2>
-      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:8px 0 12px 0;">
-        <label for="adminKidFilter">Filter by child:</label>
-        <select id="adminKidFilter"><option value="">Select a child...</option></select>
-      </div>
-      <div id="adminKidGiftsList" class="gifts-list" style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px;"></div>
-    </section>
-
-    <section style="margin-top:24px;">
-      <h2>Assignments & Settings</h2>
-      <div class="card" style="padding:12px;">
-        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
-          <div>
-            <label for="adminCurrentYear">Current Year</label>
-            <input id="adminCurrentYear" type="number" min="2000" max="9999" style="width:140px;">
+      <section id="users" class="section-card">
+        <div class="section-header">
+          <h2 class="section-title">Users</h2>
+          <div class="toolbar">
+            <label for="adminInviteEmail" style="margin:0; font-size:13px; opacity:.85;">Email</label>
+            <input id="adminInviteEmail" type="email" placeholder="user@example.com" required>
+            <label for="adminInviteName" style="margin:0; font-size:13px; opacity:.85;">Full name (optional)</label>
+            <input id="adminInviteName" type="text" placeholder="Jane Doe">
+            <button id="adminInviteBtn" class="btn-primary">Invite User</button>
           </div>
-          <label style="display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" id="adminLockAssignments"> Lock assignments
-          </label>
-          <button id="adminSaveSettingsBtn" class="btn-primary">Save Settings</button>
         </div>
-      </div>
-
-      <div class="card" style="padding:12px; margin-top:12px;">
-        <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
-          <div>
-            <label for="adminBuyerSelect">Buyer</label>
-            <select id="adminBuyerSelect"><option value="">Select buyer...</option></select>
-          </div>
-          <div>
-            <label for="adminRecipientSelect">Recipient</label>
-            <select id="adminRecipientSelect"><option value="">Select recipient...</option></select>
-          </div>
-          <button id="adminSetAssignmentBtn" class="btn-primary">Set Assignment</button>
-        </div>
-        <div style="margin-top:12px; overflow:auto;">
-          <table class="table" id="adminAssignmentsTable" style="min-width:680px;">
-            <thead><tr><th>Buyer</th><th>Recipient</th><th>Year</th></tr></thead>
+        <div style="overflow:auto;">
+          <table class="table" id="adminUsersTable" style="min-width:680px;">
+            <thead>
+              <tr><th>ID</th><th>Full Name</th><th>Email</th></tr>
+            </thead>
             <tbody></tbody>
           </table>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <section id="kids" class="section-card">
+        <div class="section-header">
+          <h2 class="section-title">Kids</h2>
+          <div class="toolbar">
+            <label for="adminNewKidName" style="margin:0; font-size:13px; opacity:.85;">Add child</label>
+            <input id="adminNewKidName" type="text" placeholder="e.g., Emma">
+            <button id="adminAddKidBtn" class="btn-primary">Add Child</button>
+          </div>
+        </div>
+        <ul id="adminKidsList" class="list" style="margin:0; padding:0; list-style:none;"></ul>
+      </section>
+
+      <section id="kid-gifts" class="section-card">
+        <div class="section-header">
+          <h2 class="section-title">Kid Gifts</h2>
+          <div class="toolbar">
+            <label for="adminKidFilter" style="margin:0; font-size:13px; opacity:.85;">Filter by child:</label>
+            <select id="adminKidFilter"><option value="">Select a child...</option></select>
+          </div>
+        </div>
+        <div id="adminKidGiftsList" class="gifts-list" style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px;"></div>
+      </section>
+
+      <section id="assign" class="section-card">
+        <div class="section-header">
+          <h2 class="section-title">Assignments & Settings</h2>
+          <div class="section-desc">Manage the current year and lock the self‑serve recipient UI.</div>
+        </div>
+        <div class="card" style="padding:12px;">
+          <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
+            <div>
+              <label for="adminCurrentYear">Current Year</label>
+              <input id="adminCurrentYear" type="number" min="2000" max="9999" style="width:140px;">
+            </div>
+            <label style="display:flex; align-items:center; gap:8px;">
+              <input type="checkbox" id="adminLockAssignments"> Lock assignments
+            </label>
+            <button id="adminSaveSettingsBtn" class="btn-primary">Save Settings</button>
+          </div>
+        </div>
+
+        <div class="card" style="padding:12px; margin-top:12px;">
+          <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+            <div>
+              <label for="adminBuyerSelect">Buyer</label>
+              <select id="adminBuyerSelect"><option value="">Select buyer...</option></select>
+            </div>
+            <div>
+              <label for="adminRecipientSelect">Recipient</label>
+              <select id="adminRecipientSelect"><option value="">Select recipient...</option></select>
+            </div>
+            <button id="adminSetAssignmentBtn" class="btn-primary">Set Assignment</button>
+          </div>
+          <div style="margin-top:12px; overflow:auto;">
+            <table class="table" id="adminAssignmentsTable" style="min-width:680px;">
+              <thead><tr><th>Buyer</th><th>Recipient</th><th>Year</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
   </main>
 </body>
 </html>
