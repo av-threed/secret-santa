@@ -778,7 +778,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (hasLink) {
                     const dom = domainFromUrl(link);
                     const titleText = String(g.name||'').replace(/\s*\((https?:[^)]+)\)\s*$/i,'').trim() || '(Link)';
-                    el.className = 'gift-item link-card gift-claimed-mine';
+                    // In Shopping List, do not apply claimed highlight styles
+                    el.className = 'gift-item link-card';
                     el.innerHTML = `
                     <div style="display:flex; gap:12px; align-items:center; width:100%">
                       <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">
@@ -791,18 +792,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         <\/div>
                       <\/a>
                       <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">
-                        <span class="claimer-badge" title="You claimed this">You<\/span>
                         <button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${g.kid_id}">${unclaimSvg()}<\/button>
                       <\/div>
                     <\/div>`;
                 } else {
-                    el.className = 'gift-item compact gift-claimed-mine';
+                    // In Shopping List, do not apply claimed highlight styles
+                    el.className = 'gift-item compact';
                     el.innerHTML = `
                       <div class="gift-item-info">
                         <h3>${g.name}${titleSuffix}<\/h3>
                       <\/div>
                       <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">
-                        <span class="claimer-badge" title="You claimed this">You<\/span>
                         <button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${g.kid_id}">${unclaimSvg()}<\/button>
                       <\/div>`;
                 }
