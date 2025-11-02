@@ -127,3 +127,18 @@ create policy "Authenticated users can unclaim their kid gift"
 -- when transitioning between null <-> auth.uid(). Application code should only
 -- modify the claim fields during these operations.
    
+-- App settings for current year and assignment lock
+create table if not exists app_settings (
+  key text primary key,
+  value text not null
+);
+
+-- Seed defaults if missing
+insert into app_settings (key, value)
+  values ('current_year', to_char(now(), 'YYYY'))
+  on conflict (key) do nothing;
+
+insert into app_settings (key, value)
+  values ('lock_assignments', 'false')
+  on conflict (key) do nothing;
+

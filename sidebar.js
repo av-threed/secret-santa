@@ -11,17 +11,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarPin = document.getElementById('sidebarPin');
     const myGiftListBtn = document.getElementById('myGiftList');
     const kidsGiftListBtn = document.getElementById('kidsGiftList');
+    const shoppingListBtn = document.getElementById('shoppingListBtn');
     const recipientGiftsBtn = document.getElementById('recipientGifts');
     const setRecipientBtn = document.getElementById('setRecipient');
     const settingsBtn = document.getElementById('settingsBtn');
     const myGiftListModal = document.getElementById('myGiftListModal');
     const kidsGiftListModal = document.getElementById('kidsGiftListModal');
+    const shoppingListModal = document.getElementById('shoppingListModal');
     const recipientGiftsModal = document.getElementById('recipientGiftsModal');
     const setRecipientModal = document.getElementById('setRecipientModal');
     const settingsModal = document.getElementById('settingsModal');
     const settingsForm = document.getElementById('settingsForm');
     const settingPinSidebar = document.getElementById('settingPinSidebar');
     const settingTheme = document.getElementById('settingTheme');
+    const shoppingListContainer = document.getElementById('shoppingListContainer');
+    const adminPortalBtn = document.getElementById('adminPortalBtn');
     const closeButtons = document.querySelectorAll('.modal-close');
     const myGiftsList = document.getElementById('myGiftsList');
     const addGiftForm = document.getElementById('addGiftForm');
@@ -118,6 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Guard to avoid attaching duplicate delegated handlers
     let kidsDeleteBound = false;
     let kidsClaimBound = false;
+    let shoppingClaimBound = false;
 
     // Settings helpers
     function getSettings() {
@@ -753,6 +758,104 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function renderShoppingList() {
+        try {
+            if (!shoppingListContainer) return;
+            shoppingListContainer.innerHTML = '<p class="no-gifts-message">Loading your claimed gifts…</p>';
+            const { getMyClaimedKidGifts } = await import('./supabase.js');
+            let from = 0; const pageSize = 50; let list = await getMyClaimedKidGifts({ from, limit: pageSize });
+            if (!list || list.length === 0) {
+                shoppingListContainer.innerHTML = '<p class="no-gifts-message">No claimed gifts yet.</p>';
+                return;
+            }
+            shoppingListContainer.innerHTML = '';
+            function renderItem(g) {
+                const el = document.createElement('div');
+                const link = g.link || extractLinkFromName(g.name);
+                const hasLink = !!link;
+                const kidName = g.kids?.name || g.kid_name || 'Unknown child';
+                const titleSuffix = kidName ? ` — <span style="color:#047857">${kidName}</span>` : '';
+                if (hasLink) {
+                    const dom = domainFromUrl(link);
+                    const titleText = String(g.name||'').replace(/\s*\((https?:[^)]+)\)\s*$/i,'').trim() || '(Link)';
+                    el.className = 'gift-item link-card gift-claimed-mine';
+                    el.innerHTML = `
+                    <div style="display:flex; gap:12px; align-items:center; width:100%">
+                      <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">
+                        <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                          <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">
+                        </div>
+                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">
+                          <h3 style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${titleText}${titleSuffix}<\/h3>
+                          <p class="gift-link" style="margin:0; color:#4b5563; font-size:13px;">${dom} ↗<\/p>
+                        <\/div>
+                      <\/a>
+                      <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+                        <span class="claimer-badge" title="You claimed this">You<\/span>
+                        <button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${g.kid_id}">${unclaimSvg()}<\/button>
+                      <\/div>
+                    <\/div>`;
+                } else {
+                    el.className = 'gift-item compact gift-claimed-mine';
+                    el.innerHTML = `
+                      <div class="gift-item-info">
+                        <h3>${g.name}${titleSuffix}<\/h3>
+                      <\/div>
+                      <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+                        <span class="claimer-badge" title="You claimed this">You<\/span>
+                        <button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${g.kid_id}">${unclaimSvg()}<\/button>
+                      <\/div>`;
+                }
+                shoppingListContainer.appendChild(el);
+            }
+            list.forEach(renderItem);
+            if (list.length === pageSize) {
+                const loadMore = document.createElement('div');
+                loadMore.style.textAlign = 'center';
+                loadMore.style.margin = '12px 0 4px 0';
+                const btn = document.createElement('button');
+                btn.className = 'btn-secondary';
+                btn.textContent = 'Load more';
+                btn.addEventListener('click', async () => {
+                    btn.disabled = true;
+                    from += pageSize;
+                    const next = await getMyClaimedKidGifts({ from, limit: pageSize });
+                    next.forEach(renderItem);
+                    if (next.length < pageSize) loadMore.remove(); else btn.disabled = false;
+                });
+                loadMore.appendChild(btn);
+                shoppingListContainer.appendChild(loadMore);
+            }
+
+            if (!shoppingClaimBound) {
+                shoppingListContainer.addEventListener('click', async (ev) => {
+                    const unclaimBtn = ev.target.closest('.btn-unclaim-kid');
+                    if (!unclaimBtn) return;
+                    const idAttr = unclaimBtn.getAttribute('data-id');
+                    unclaimBtn.classList.add('is-loading');
+                    try {
+                        const { supabase } = await import('./supabase.js');
+                        const { data: userData } = await supabase.auth.getUser();
+                        const me = userData?.user?.id;
+                        if (!me) { showToast('Sign in to unclaim', 'error'); return; }
+                        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idAttr);
+                        if (!isUuid) { showToast('Could not unclaim (invalid id)', 'error'); return; }
+                        const { data, error } = await supabase.rpc('unclaim_kid_gift', { p_id: idAttr });
+                        if (error) throw error;
+                        if (!data) { showToast('Cannot unclaim (not yours)', 'error'); return; }
+                        showToast('Unclaimed');
+                        await renderShoppingList();
+                    } catch (e) { console.error(e); showToast('Failed to unclaim', 'error'); }
+                    finally { unclaimBtn.classList.remove('is-loading'); }
+                });
+                shoppingClaimBound = true;
+            }
+        } catch (e) {
+            console.error('Failed to render shopping list', e);
+            if (shoppingListContainer) shoppingListContainer.innerHTML = '<p class="no-gifts-message">Unable to load shopping list.</p>';
+        }
+    }
+
     // Handle adding new gifts
     addGiftForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -813,6 +916,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (modal === recipientGiftsModal) {
             await loadRecipientGifts();
+        }
+        if (modal === shoppingListModal) {
+            await renderShoppingList();
         }
         if (modal === setRecipientModal) {
             const locked = await isAssignmentsLocked();
@@ -879,12 +985,12 @@ document.addEventListener('DOMContentLoaded', () => {
             currentModal = null;
         }
         // Clear active state when closing any modal
-        [myGiftListBtn, kidsGiftListBtn, recipientGiftsBtn, setRecipientBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
+        [myGiftListBtn, kidsGiftListBtn, shoppingListBtn, recipientGiftsBtn, setRecipientBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
     }
 
     // Open modals from sidebar buttons
     const markActive = (btn) => {
-        [myGiftListBtn, kidsGiftListBtn, recipientGiftsBtn, setRecipientBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
+        [myGiftListBtn, kidsGiftListBtn, shoppingListBtn, recipientGiftsBtn, setRecipientBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
         btn && btn.classList.add('active');
     };
 
@@ -898,6 +1004,12 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         markActive(kidsGiftListBtn);
         await openModal(kidsGiftListModal);
+    });
+
+    shoppingListBtn?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        markActive(shoppingListBtn);
+        await openModal(shoppingListModal);
     });
 
     recipientGiftsBtn.addEventListener('click', async (e) => {
@@ -928,6 +1040,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // Show Admin portal button only for admin email
+    (async function showAdminButtonIfAllowed(){
+        try {
+            if (!adminPortalBtn) return;
+            const { supabase } = await import('./supabase.js');
+            const { data: userData } = await supabase.auth.getUser();
+            const email = String(userData?.user?.email || '').toLowerCase();
+            const adminEmail = 'antoniovillasenor08@gmail.com';
+            if (email && email === adminEmail) {
+                adminPortalBtn.style.display = '';
+                adminPortalBtn.addEventListener('click', (e) => { e.preventDefault(); window.location.href = 'admin.html'; });
+            }
+        } catch {}
+    })();
 
     settingsForm?.addEventListener('submit', (e) => {
         e.preventDefault();

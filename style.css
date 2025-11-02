@@ -1001,8 +1001,9 @@ button:hover {
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: var(--color-primary);
-  color: #fff;
+  background: var(--color-surface); /* match app surface/background */
+  color: var(--color-text);
+  border: 1.5px solid var(--color-border); /* outlined */
   display: none;
   align-items: center;
   justify-content: center;
@@ -1010,6 +1011,7 @@ button:hover {
   box-shadow: 0 4px 10px rgba(0,0,0,.25);
   touch-action: manipulation;
 }
+.hamburger:hover { background: var(--color-bg); }
 @media (max-width: 900px) {
   .hamburger { display: inline-flex; }
 }

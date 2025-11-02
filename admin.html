@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Portal • Secret Santa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+  <script src="supabase.js" type="module"></script>
+  <script src="ui.js" type="module"></script>
+  <script src="admin.js" type="module"></script>
+</head>
+<body>
+  <main class="main-content" style="max-width:1100px; margin:0 auto; padding:16px;">
+    <div class="welcome-banner">
+      <h1 class="brand-title">Admin Portal</h1>
+      <span class="helper-text">Manage users, kids, gifts, assignments and settings</span>
+    </div>
+
+    <section style="margin-top:16px;">
+      <h2>Users</h2>
+      <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin:8px 0 12px 0;">
+        <div>
+          <label for="adminInviteEmail">Email</label>
+          <input id="adminInviteEmail" type="email" placeholder="user@example.com" required>
+        </div>
+        <div>
+          <label for="adminInviteName">Full name (optional)</label>
+          <input id="adminInviteName" type="text" placeholder="Jane Doe">
+        </div>
+        <button id="adminInviteBtn" class="btn-primary">Invite User</button>
+      </div>
+      <div style="overflow:auto;">
+        <table class="table" id="adminUsersTable" style="min-width:680px;">
+          <thead>
+            <tr><th>ID</th><th>Full Name</th><th>Email</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section style="margin-top:24px;">
+      <h2>Kids</h2>
+      <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin:8px 0 12px 0;">
+        <div>
+          <label for="adminNewKidName">Add child</label>
+          <input id="adminNewKidName" type="text" placeholder="e.g., Emma">
+        </div>
+        <button id="adminAddKidBtn" class="btn-primary">Add Child</button>
+      </div>
+      <ul id="adminKidsList" class="list" style="margin:0; padding:0; list-style:none;"></ul>
+    </section>
+
+    <section style="margin-top:24px;">
+      <h2>Kid Gifts</h2>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:8px 0 12px 0;">
+        <label for="adminKidFilter">Filter by child:</label>
+        <select id="adminKidFilter"><option value="">Select a child...</option></select>
+      </div>
+      <div id="adminKidGiftsList" class="gifts-list" style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px;"></div>
+    </section>
+
+    <section style="margin-top:24px;">
+      <h2>Assignments & Settings</h2>
+      <div class="card" style="padding:12px;">
+        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
+          <div>
+            <label for="adminCurrentYear">Current Year</label>
+            <input id="adminCurrentYear" type="number" min="2000" max="9999" style="width:140px;">
+          </div>
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="adminLockAssignments"> Lock assignments
+          </label>
+          <button id="adminSaveSettingsBtn" class="btn-primary">Save Settings</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:12px; margin-top:12px;">
+        <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+          <div>
+            <label for="adminBuyerSelect">Buyer</label>
+            <select id="adminBuyerSelect"><option value="">Select buyer...</option></select>
+          </div>
+          <div>
+            <label for="adminRecipientSelect">Recipient</label>
+            <select id="adminRecipientSelect"><option value="">Select recipient...</option></select>
+          </div>
+          <button id="adminSetAssignmentBtn" class="btn-primary">Set Assignment</button>
+        </div>
+        <div style="margin-top:12px; overflow:auto;">
+          <table class="table" id="adminAssignmentsTable" style="min-width:680px;">
+            <thead><tr><th>Buyer</th><th>Recipient</th><th>Year</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+
+
