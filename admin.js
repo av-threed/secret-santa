@@ -300,10 +300,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Initial loads
-  await loadUsers();
-  await loadKids();
-  await loadSettings();
-  await loadAssignments();
+  try { await loadSettings(); } catch(e){ console.error('loadSettings failed', e); }
+  try { await loadUsers(); } catch(e){ console.error('loadUsers failed', e); }
+  try { await loadKids(); } catch(e){ console.error('loadKids failed', e); }
+  try { await loadAssignments(); } catch(e){ console.error('loadAssignments failed', e); }
 });
 
 
