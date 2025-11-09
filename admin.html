@@ -17,23 +17,26 @@
         <span class="helper-text">Manage users, kids, gifts, assignments and settings</span>
       </div>
 
-      <nav class="admin-subnav">
-        <a class="subnav-chip" href="#users">Users</a>
-        <a class="subnav-chip" href="#kids">Kids</a>
-        <a class="subnav-chip" href="#kid-gifts">Kid Gifts</a>
-        <a class="subnav-chip" href="#assign">Assignments</a>
-      </nav>
-
       <section id="users" class="section-card">
         <div class="section-header">
           <h2 class="section-title">Users</h2>
-          <div class="toolbar">
-            <label for="adminInviteEmail" style="margin:0; font-size:13px; opacity:.85;">Email</label>
-            <input id="adminInviteEmail" type="email" placeholder="user@example.com" required>
-            <label for="adminInviteName" style="margin:0; font-size:13px; opacity:.85;">Full name (optional)</label>
-            <input id="adminInviteName" type="text" placeholder="Jane Doe">
-            <button id="adminInviteBtn" class="btn-primary">Invite User</button>
-          </div>
+        </div>
+        <div class="card" style="padding:12px;">
+          <form id="adminInviteForm" class="form-row" onsubmit="return false;">
+            <div class="field">
+              <label for="adminInviteEmail">Email</label>
+              <input id="adminInviteEmail" type="email" placeholder="user@example.com" required>
+              <div class="field-help">Sends a Supabase invite email.</div>
+            </div>
+            <div class="field">
+              <label for="adminInviteName">Full name (optional)</label>
+              <input id="adminInviteName" type="text" placeholder="Jane Doe">
+            </div>
+            <div class="field actions">
+              <label style="visibility:hidden;">Invite</label>
+              <button id="adminInviteBtn" class="btn-primary" type="button">Invite</button>
+            </div>
+          </form>
         </div>
         <div style="overflow:auto;">
           <table class="table" id="adminUsersTable" style="min-width:680px;">
@@ -65,6 +68,7 @@
             <select id="adminKidFilter"><option value="">Select a child...</option></select>
           </div>
         </div>
+        <div id="adminKidGiftsHeader" class="kid-gifts-header"></div>
         <div id="adminKidGiftsList" class="gifts-list" style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px;"></div>
       </section>
 

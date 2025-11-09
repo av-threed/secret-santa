@@ -74,8 +74,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const email = (inviteEmail.value || '').trim();
     const fullName = (inviteName.value || '').trim();
     if (!email) { showToast('Email required', 'error'); return; }
-    try { await inviteUser(email, fullName || undefined); showToast('Invite sent'); inviteEmail.value=''; inviteName.value=''; }
-    catch(e){ console.error(e); showToast('Failed to invite', 'error'); }
+    const prev = inviteBtn.textContent;
+    inviteBtn.disabled = true;
+    inviteBtn.textContent = 'Inviting…';
+    inviteBtn.setAttribute('aria-busy', 'true');
+    try {
+      await inviteUser(email, fullName || undefined);
+      showToast('Invite sent');
+      inviteEmail.value = '';
+      inviteName.value = '';
+    } catch(e){
+      console.error(e);
+      showToast('Failed to invite', 'error');
+    } finally {
+      inviteBtn.disabled = false;
+      inviteBtn.textContent = prev;
+      inviteBtn.removeAttribute('aria-busy');
+    }
   });
 
   // Kids
@@ -85,16 +100,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     cachedKids = kids;
     // list items
     kidsList.innerHTML = '';
-    kids.forEach(k => {
+    if (!kids.length) {
       const li = document.createElement('li');
-      li.style.display = 'flex'; li.style.justifyContent = 'space-between'; li.style.alignItems = 'center'; li.style.padding = '6px 0';
-      li.innerHTML = `<span>${k.name}</span>
-        <span style="display:flex; gap:8px;">
-          <button class="btn-secondary" data-action="rename" data-id="${k.id}">Rename</button>
-          <button class="btn-delete" data-action="delete" data-id="${k.id}">Delete</button>
-        </span>`;
+      li.className = 'empty';
+      li.textContent = 'No kids yet';
       kidsList.appendChild(li);
-    });
+    } else {
+      kids.forEach(k => {
+        const li = document.createElement('li');
+        li.style.display = 'flex'; li.style.justifyContent = 'space-between'; li.style.alignItems = 'center'; li.style.padding = '6px 0';
+        li.innerHTML = `<span>${k.name}</span>
+          <span style="display:flex; gap:8px;">
+            <button class="btn-secondary" data-action="rename" data-id="${k.id}">Rename</button>
+            <button class="btn-delete" data-action="delete" data-id="${k.id}">Delete</button>
+          </span>`;
+        kidsList.appendChild(li);
+      });
+    }
     // filter select
     kidFilter.innerHTML = '<option value="">Select a child...</option>';
     kids.forEach(k => { const o=document.createElement('option'); o.value=k.id; o.textContent=k.name; kidFilter.appendChild(o); });
@@ -127,9 +149,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Kid gifts
   async function loadKidGiftsAdmin(kidId) {
     kidGiftsList.innerHTML = '';
-    if (!kidId) return;
+    const header = document.getElementById('adminKidGiftsHeader');
+    if (!kidId) { if (header) header.textContent = ''; return; }
     const res = await adminInvoke('list_kid_gifts', { kid_id: kidId });
     const gifts = res?.data || [];
+    // Update header with counts
+    try {
+      const kid = (cachedKids || []).find(k => String(k.id) === String(kidId));
+      const claimed = (gifts || []).filter(g => !!g.claimed_by_full_name).length;
+      const total = (gifts || []).length;
+      if (header) {
+        const name = kid?.name || '';
+        header.innerHTML = name ? `<div><strong>${total}</strong> gifts for <strong>${name}</strong></div><div class="count">${claimed} claimed<\/div>` : `<div><strong>${total}</strong> gifts</div><div class="count">${claimed} claimed<\/div>`;
+      }
+    } catch {}
     if (!gifts.length) { kidGiftsList.innerHTML = '<p class="no-gifts-message">No gifts yet.</p>'; return; }
     gifts.forEach(g => {
       const link = g.link || null;
@@ -157,15 +190,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button class="btn-delete" data-action="delete" data-id="${g.id}">Delete<\/button>
           <\/div>
         <\/div>` : `
-        <div class="gift-item-info">
-          <h3 style="overflow-wrap:anywhere; word-break:break-word;">${g.name}<\/h3>
-          ${g.notes ? `<p class="gift-notes">${g.notes}<\/p>` : ''}
-        <\/div>
-        <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">
-          ${g.claimed_by_full_name ? `<span class="claimer-badge other" title="${g.claimed_by_full_name}">${(g.claimed_by_full_name||'').split(/\s+/).slice(0,2).join(' ')}<\/span>` : ''}
-          <button class="btn-secondary" data-action="edit" data-id="${g.id}" data-kid="${g.kid_id}">Edit<\/button>
-          <button class="btn-secondary" data-action="clear" data-id="${g.id}">Clear Claim<\/button>
-          <button class="btn-delete" data-action="delete" data-id="${g.id}">Delete<\/button>
+        <div style="display:flex; gap:12px; align-items:center; width:100%">
+          <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">
+            <h3 style="overflow-wrap:anywhere; word-break:break-word; margin:0 0 4px 0;">${g.name}<\/h3>
+            ${g.notes ? `<p class="gift-notes" style="margin:0;">${g.notes}<\/p>` : ''}
+          <\/div>
+          <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+            ${g.claimed_by_full_name ? `<span class="claimer-badge other" title="${g.claimed_by_full_name}">${(g.claimed_by_full_name||'').split(/\s+/).slice(0,2).join(' ')}<\/span>` : ''}
+            <button class="btn-secondary" data-action="edit" data-id="${g.id}" data-kid="${g.kid_id}">Edit<\/button>
+            <button class="btn-secondary" data-action="clear" data-id="${g.id}">Clear Claim<\/button>
+            <button class="btn-delete" data-action="delete" data-id="${g.id}">Delete<\/button>
+          <\/div>
         <\/div>`;
       // Claim setter block
       const claimWrap = document.createElement('div');
