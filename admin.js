@@ -1,5 +1,5 @@
 // Admin Portal logic
-import { supabase, inviteUser } from './supabase.js';
+import { supabase, inviteUser, getKids } from './supabase.js';
 import { confirmDialog, showToast, inputDialog, editGiftDialog } from './ui.js';
 
 export const ADMIN_EMAIL = 'antonio.villasenor08@gmail.com';
@@ -95,8 +95,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Kids
   async function loadKids() {
-    const res = await adminInvoke('list_kids');
-    const kids = res?.data || [];
+    let kids = [];
+    try {
+      const res = await adminInvoke('list_kids');
+      kids = res?.data || [];
+    } catch (e) {
+      console.error('list_kids failed, falling back to direct select', e);
+    }
+    if (!kids.length) {
+      try {
+        kids = await getKids();
+        try { showToast('Loaded kids (fallback)'); } catch {}
+      } catch (e2) {
+        console.error('Fallback getKids failed', e2);
+        try { showToast('Unable to load kids', 'error'); } catch {}
+        kids = [];
+      }
+    }
     cachedKids = kids;
     // list items
     kidsList.innerHTML = '';
