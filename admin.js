@@ -52,8 +52,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Users
   async function loadUsers() {
-    const res = await adminInvoke('list_profiles');
-    const rows = res?.data || [];
+    let rows = [];
+    try {
+      const res = await adminInvoke('list_profiles');
+      rows = res?.data || [];
+    } catch (e) {
+      console.error('list_profiles failed, falling back to profiles table', e);
+    }
+    if (!rows.length) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .order('full_name', { ascending: true });
+        if (error) throw error;
+        rows = (data || []).map(p => ({ id: p.id, full_name: p.full_name || null, email: null }));
+        try { showToast('Loaded users (fallback)'); } catch {}
+      } catch (e2) {
+        console.error('Fallback profiles query failed', e2);
+        try { showToast('Unable to load users', 'error'); } catch {}
+        rows = [];
+      }
+    }
     usersTableBody.innerHTML = '';
     rows.forEach(r => {
       const tr = document.createElement('tr');
