@@ -804,6 +804,54 @@ label {
   margin-bottom: 8px;
 }
 
+/* Uniform controls inside admin cards */
+.section-card input[type="text"],
+.section-card input[type="email"],
+.section-card input[type="number"],
+.section-card input[type="url"],
+.section-card select,
+.section-card textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  box-sizing: border-box;
+}
+.section-card input[type="text"],
+.section-card input[type="email"],
+.section-card input[type="number"],
+.section-card input[type="url"],
+.section-card select {
+  height: 40px;
+}
+.section-card textarea {
+  min-height: 120px;
+}
+.section-card input::placeholder,
+.section-card textarea::placeholder {
+  color: #9CA3AF; /* gray-400 */
+  opacity: 1;
+}
+.section-card input:focus,
+.section-card select:focus,
+.section-card textarea:focus {
+  outline: 2px solid var(--color-link);
+  outline-offset: 1px;
+  border-color: var(--color-link);
+}
+.section-card .field { margin-bottom: 4px; }
+.section-card .field.actions { margin-bottom: 0; }
+
+/* Compact, consistent spacing for inline cards within admin sections */
+.section-card .card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
 select,
 textarea {
   width: 100%;
@@ -1060,6 +1108,28 @@ button:hover {
 @media (max-width: 720px) {
   .form-row { flex-direction: column; align-items: stretch; }
   .field { min-width: 0; width: 100%; }
+}
+
+/* Make Users form perfectly parallel using grid inside admin cards */
+.section-card .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  column-gap: 12px;
+  row-gap: 0;
+  align-items: end;
+}
+.section-card .form-row .field { flex: unset; min-width: 0; }
+.section-card .form-row .field.actions { align-self: end; }
+/* Keep helper under the first input without breaking alignment */
+.section-card .form-row .field { position: relative; padding-bottom: 18px; }
+.section-card .form-row .field .field-help { position: absolute; left: 0; bottom: 0; margin-top: 0; }
+@media (max-width: 720px) {
+  .section-card .form-row {
+    grid-template-columns: 1fr;
+    row-gap: 8px;
+  }
+  .section-card .form-row .field { padding-bottom: 0; }
+  .section-card .form-row .field .field-help { position: static; }
 }
 .btn-danger { background: var(--status-error); }
 .btn-danger:hover { background: var(--status-error-dark, #991b1b); }
