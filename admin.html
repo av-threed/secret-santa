@@ -104,12 +104,12 @@
           <form id="adminInviteForm" class="form-row" onsubmit="return false;">
             <div class="field">
               <label for="adminInviteEmail">Email</label>
-              <input id="adminInviteEmail" type="email" placeholder="user@example.com" required>
+              <input id="adminInviteEmail" type="email" name="email" autocomplete="email" placeholder="user@example.com" required>
               <div class="field-help">Sends a Supabase invite email.</div>
             </div>
             <div class="field">
               <label for="adminInviteName">Full name (optional)</label>
-              <input id="adminInviteName" type="text" placeholder="Jane Doe">
+              <input id="adminInviteName" type="text" name="name" autocomplete="name" placeholder="Jane Doe">
             </div>
             <div class="field actions">
               <label style="visibility:hidden;">Invite</label>

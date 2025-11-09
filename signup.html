@@ -5,12 +5,15 @@
   <title>Sign Up - Secret Santa</title>
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f8f8; }
-    .container { max-width: 400px; margin: 60px auto; background: #fff; padding: 32px; border-radius: 10px; box-shadow: 0 2px 12px rgba(44,62,80,0.10); border: 2px solid #c62828; }
-    h2 { color: #388e3c; text-align: center; }
-    label { display: block; margin-top: 18px; font-weight: bold; color: #388e3c; }
-    input { width: 100%; padding: 12px; margin-top: 8px; border-radius: 6px; border: 1.5px solid #c62828; font-size: 1em; background: #fff; color: #222; box-sizing: border-box; }
-    button { margin-top: 28px; background: linear-gradient(90deg, #c62828 60%, #388e3c 100%); color: #fffbe7; border: none; padding: 14px 28px; border-radius: 6px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(44, 62, 80, 0.10); transition: background 0.2s; }
-    button:hover { background: linear-gradient(90deg, #b71c1c 60%, #2e7d32 100%); }
+    .container { max-width: 400px; margin: 60px auto; background: #fff; padding: 32px; border-radius: 10px; box-shadow: 0 2px 12px rgba(44,62,80,0.10); border: 2px solid #0E5A3A; }
+    h2 { color: #0E5A3A; text-align: center; }
+    label { display: block; margin-top: 18px; font-weight: bold; color: #0E5A3A; }
+    input { width: 100%; padding: 12px; margin-top: 8px; border-radius: 6px; border: 1.5px solid #E8DFC8; font-size: 1em; background: #fff; color: #222; box-sizing: border-box; }
+    .actions { display:flex; gap: 12px; align-items:center; margin-top: 24px; }
+    .btn-primary { background: #0E5A3A; color: #fffbe7; border: none; padding: 14px 28px; border-radius: 6px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(44, 62, 80, 0.10); transition: background 0.2s; }
+    .btn-primary:hover { background: #0B4A2F; }
+    .btn-secondary { background: #e5e7eb; color: #111827; border: 1px solid #d1d5db; padding: 14px 20px; border-radius: 6px; font-size: 1.05em; font-weight: 600; text-decoration: none; display: inline-block; }
+    .btn-secondary:hover { background: #e2e8f0; }
     .error { color: #c62828; margin: 10px 0; font-weight: bold; }
     .success { color: #388e3c; margin: 10px 0; font-weight: bold; }
   </style>
@@ -51,14 +54,17 @@
     <h2>Create Your Account</h2>
     <form id="signupForm">
       <label for="firstName">First Name</label>
-      <input type="text" id="firstName" required>
+      <input type="text" id="firstName" name="given-name" autocomplete="given-name" required>
       <label for="lastName">Last Name</label>
-      <input type="text" id="lastName" required>
+      <input type="text" id="lastName" name="family-name" autocomplete="family-name" required>
       <label for="email">Email Address</label>
-      <input type="email" id="email" required>
+      <input type="email" id="email" name="email" autocomplete="email" required>
       <label for="password">Password</label>
-      <input type="password" id="password" required>
-      <button type="submit">Create Account</button>
+      <input type="password" id="password" name="new-password" autocomplete="new-password" required>
+      <div class="actions">
+        <button type="submit" class="btn-primary">Create Account</button>
+        <a class="btn-secondary" href="signin.html">Back to Login</a>
+      </div>
     </form>
     <div id="message"></div>
   </div>
