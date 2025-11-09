@@ -465,9 +465,21 @@ body {
   background-color: #e5e7eb;
   color: #111827;
   border: 1px solid var(--color-border);
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 .btn-secondary:hover {
   background-color: #e2e8f0;
+}
+
+/* Allow anchor buttons to look like buttons */
+a.btn-primary,
+a.btn-secondary,
+a.btn-delete {
+  text-decoration: none;
+  display: inline-block;
 }
 
 /* Gifts List Styles */
