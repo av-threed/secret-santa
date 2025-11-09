@@ -20,11 +20,17 @@
   document.addEventListener('DOMContentLoaded', async () => {
     initAuthRouteGuards();
 
-    // If a magic/invite link already signed the user in, go to the app
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      window.location.replace('index.html');
-      return;
+    // Check if this is from a magic/invite link (has auth tokens in URL)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const isFromMagicLink = hashParams.has('access_token') || hashParams.has('refresh_token');
+    
+    // Only auto-redirect if this is from a magic/invite link
+    if (isFromMagicLink) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        window.location.replace('index.html');
+        return;
+      }
     }
 
     const form = document.getElementById('signinForm');

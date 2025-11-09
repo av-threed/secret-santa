@@ -1154,12 +1154,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Expose global signOut handler for the inline onclick in HTML
     window.signOut = async () => {
         try {
+            // Clear local fallback data first
+            try { localStorage.removeItem('my_gift_ideas'); } catch (_) {}
+            
+            // Sign out from Supabase (this clears the session)
             await supaSignOut();
+            
+            // Small delay to ensure session is cleared
+            await new Promise(resolve => setTimeout(resolve, 100));
         } catch (err) {
             console.error('Error during sign out:', err);
         } finally {
-            // Clear local fallback data and redirect to sign-in page
-            try { localStorage.removeItem('my_gift_ideas'); } catch (_) {}
+            // Redirect to sign-in page
             window.location.href = 'signin.html';
         }
     };
