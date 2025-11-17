@@ -578,12 +578,10 @@
       if(mode==='link'){
         kidsIdeaFields.style.display='none';
         kidsLinkFields.style.display='';
-        if(kidsTextarea) kidsTextarea.required=false;
         if(kidUrlInput) kidUrlInput.required=true;
       } else {
         kidsIdeaFields.style.display='';
         kidsLinkFields.style.display='none';
-        if(kidsTextarea) kidsTextarea.required=true;
         if(kidUrlInput) kidUrlInput.required=false;
       }
     }
@@ -691,12 +689,10 @@
       if(mode==='link'){
         parentsIdeaFields.style.display='none';
         parentsLinkFields.style.display='';
-        if(parentsTextarea) parentsTextarea.required=false;
         if(parentUrlInput) parentUrlInput.required=true;
       } else {
         parentsIdeaFields.style.display='';
         parentsLinkFields.style.display='none';
-        if(parentsTextarea) parentsTextarea.required=true;
         if(parentUrlInput) parentUrlInput.required=false;
       }
     }
