@@ -781,6 +781,7 @@
         }
         showToast(`Added ${tags.length} idea${tags.length!==1?'s':''}`);
         clearTags(adultTagContainer);
+        window.dispatchEvent(new CustomEvent('my-gifts-updated'));
       } else { // link mode
         const rawUrl = (urlInput.value||'').trim();
         if (!rawUrl) { showToast('Enter a product link', 'error'); return; }
@@ -798,9 +799,9 @@
           }
           showToast('Link added');
           urlInput.value=''; captionInput.value='';
+          window.dispatchEvent(new CustomEvent('my-gifts-updated'));
         } catch(err){ console.error(err); showToast('Failed to add link', 'error'); }
       }
-      loadMyGifts?.();
     });
     // (Removed obsolete mixed kids handler block that was left after refactor)
 
