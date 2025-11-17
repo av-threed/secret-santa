@@ -187,6 +187,8 @@ body {
   flex-direction: column;
   padding: 20px 10px;
   gap: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sidebar-button {
@@ -408,9 +410,45 @@ body {
   opacity: 1;
 }
 
+/* Mobile: larger touch target for close button */
+@media (max-width: 600px) {
+  .modal-close {
+    font-size: 28px;
+    padding: 8px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 .modal-body {
   padding: 20px;
   overflow-y: auto;
+}
+
+/* Mobile: reduce modal padding for more content space */
+@media (max-width: 600px) {
+  .modal-body {
+    padding: 16px;
+  }
+  
+  .modal-header {
+    padding: 16px;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.25rem;
+  }
+  
+  /* Form groups in modals */
+  .modal-body .form-group label {
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  
+  .modal-body .form-group select,
+  .modal-body .form-group input {
+    font-size: 16px; /* Prevent iOS zoom */
+  }
 }
 
 /* Modals should cover the entire viewport even if the sidebar is pinned */
@@ -440,11 +478,22 @@ body {
   border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 14px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .gift-form textarea {
   resize: vertical;
   min-height: 240px;
+}
+
+/* Mobile: larger touch targets and better spacing */
+@media (max-width: 600px) {
+  .gift-form input,
+  .gift-form textarea {
+    padding: 12px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
 }
 
 .btn-primary {
@@ -461,6 +510,14 @@ body {
   background-color: var(--color-primary-700);
 }
 
+/* Mobile: larger touch targets */
+@media (max-width: 600px) {
+  .btn-primary {
+    padding: 12px 24px;
+    min-height: 44px;
+  }
+}
+
 .btn-secondary {
   background-color: #e5e7eb;
   color: #111827;
@@ -472,6 +529,14 @@ body {
 }
 .btn-secondary:hover {
   background-color: #e2e8f0;
+}
+
+/* Mobile: larger touch targets */
+@media (max-width: 600px) {
+  .btn-secondary {
+    padding: 12px 24px;
+    min-height: 44px;
+  }
 }
 
 /* Allow anchor buttons to look like buttons */
@@ -497,6 +562,14 @@ a.btn-delete {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
+  min-height: 50px;
+}
+
+/* Mobile: ensure proper spacing and prevent text overflow */
+@media (max-width: 600px) {
+  .gift-item {
+    padding: 10px 12px;
+  }
 }
 
 /* Compact variant for dense lists inside modals */
@@ -512,18 +585,33 @@ a.btn-delete {
 .gift-item-info h3 {
   margin: 0 0 5px 0;
   color: var(--color-text);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
 }
 
 .gift-item-info p {
   margin: 0;
   color: var(--color-text);
   opacity: 0.8;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .gift-item-actions {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-shrink: 0;
+}
+
+/* Mobile: ensure buttons stay visible and touchable */
+@media (max-width: 600px) {
+  .gift-item-actions {
+    gap: 6px;
+  }
 }
 
 /* Claim state styling */
@@ -551,6 +639,14 @@ a.btn-delete {
 }
 .claimer-badge.other { background: rgba(217,119,6,0.15); color: var(--status-hold); }
 
+/* Mobile: slightly larger badges for readability */
+@media (max-width: 600px) {
+  .claimer-badge {
+    font-size: 12px;
+    padding: 3px 8px;
+  }
+}
+
 .claim-status-text { font-size: 12px; opacity: 0.7; }
 
 .btn-icon.claim-btn { color: var(--color-primary); border-color: rgba(15,109,78,0.25); }
@@ -575,6 +671,20 @@ a.btn-delete {
 .unclaimed-filter-toggle { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; }
 .unclaimed-filter-toggle input { accent-color: var(--color-primary); }
 
+/* Mobile: ensure filter toggle is touchable */
+@media (max-width: 600px) {
+  .unclaimed-filter-toggle {
+    font-size: 13px;
+    gap: 8px;
+    padding: 8px 0;
+  }
+  
+  .unclaimed-filter-toggle input {
+    width: 18px;
+    height: 18px;
+  }
+}
+
 /* Icon-only, compact delete button */
 .btn-icon {
   background: transparent;
@@ -587,6 +697,20 @@ a.btn-delete {
   align-items: center;
   justify-content: center;
   border-radius: 8px;
+  flex-shrink: 0;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+/* Mobile: larger touch targets for better usability */
+@media (max-width: 600px) {
+  .btn-icon {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 8px;
+  }
 }
 
 /* Segmented control (Idea / Link) */
@@ -616,6 +740,14 @@ a.btn-delete {
   transition: color .25s ease;
 }
 .segmented .segment[aria-checked="true"] { color: var(--color-primary); }
+
+/* Mobile: larger touch targets for segmented control */
+@media (max-width: 600px) {
+  .segmented .segment {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}
 .segmented-indicator {
   position: absolute;
   z-index: 1;
@@ -650,6 +782,15 @@ a.btn-delete {
   color: var(--color-text);
 }
 
+/* Mobile: prevent zoom and larger touch targets */
+@media (max-width: 600px) {
+  .kid-select {
+    font-size: 16px;
+    padding: 12px;
+    min-height: 44px;
+  }
+}
+
 /* Align add-child button with select */
 .child-row {
   display: flex;
@@ -676,6 +817,17 @@ a.btn-delete {
   animation: slide-in 0.3s ease;
   max-width: 400px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile: full-width notifications at bottom */
+@media (max-width: 600px) {
+  .notification {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: none;
+    text-align: center;
+  }
 }
 
 .notification.error {
@@ -760,6 +912,14 @@ a.btn-delete {
 
 .btn-delete svg {
   opacity: 0.9;
+}
+
+/* Mobile: larger touch targets */
+@media (max-width: 600px) {
+  .btn-delete {
+    padding: 10px 16px;
+    min-height: 44px;
+  }
 }
 
 /* Global styles */
@@ -877,6 +1037,15 @@ textarea {
   box-sizing: border-box;
 }
 
+/* Mobile: prevent zoom on focus and improve touch targets */
+@media (max-width: 600px) {
+  select,
+  textarea {
+    font-size: 16px;
+    padding: 14px;
+  }
+}
+
 /* Make kids gift ideas box larger by default */
 #kidsGiftIdeas {
   min-height: 260px;
@@ -974,6 +1143,34 @@ button:hover {
 
   .main-content {
     padding: 20px;
+  }
+}
+
+/* Mobile: optimize for smaller screens */
+@media (max-width: 600px) {
+  .main-content {
+    padding: 12px;
+  }
+  
+  .gift-form {
+    padding: 20px;
+    min-height: auto;
+  }
+  
+  .form-title {
+    font-size: 1.25em;
+  }
+  
+  .helper-text {
+    font-size: 14px;
+  }
+  
+  .welcome-banner {
+    padding: 10px 16px;
+  }
+  
+  .brand-title {
+    font-size: 1.1rem;
   }
 }
 
@@ -1103,6 +1300,18 @@ button:hover {
   border: 1px solid var(--color-border);
   padding: 6px 10px; border-radius: 999px; font-size: 13px; white-space: nowrap;
 }
+
+/* Mobile: admin page optimizations */
+@media (max-width: 600px) {
+  .admin-container {
+    padding: 12px;
+  }
+  
+  .subnav-chip {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+}
 .section-card { background: var(--color-surface); border: 1px solid var(--color-border);
   border-radius: 12px; padding: 16px; margin: 10px 0; }
 .admin-container .section-card:first-of-type { margin-top: 8px; }
@@ -1120,6 +1329,17 @@ button:hover {
 @media (max-width: 720px) {
   .form-row { flex-direction: column; align-items: stretch; }
   .field { min-width: 0; width: 100%; }
+  
+  .field label {
+    font-size: 14px;
+  }
+  
+  .field input,
+  .field select {
+    font-size: 16px; /* Prevent iOS zoom */
+    padding: 12px;
+    min-height: 44px;
+  }
 }
 
 /* Make Users form perfectly parallel using grid inside admin cards */
@@ -1142,6 +1362,14 @@ button:hover {
   }
   .section-card .form-row .field { padding-bottom: 0; }
   .section-card .form-row .field .field-help { position: static; }
+  
+  .section-title {
+    font-size: 16px;
+  }
+  
+  .section-card {
+    padding: 12px;
+  }
 }
 .btn-danger { background: var(--status-error); }
 .btn-danger:hover { background: var(--status-error-dark, #991b1b); }
@@ -1150,6 +1378,18 @@ button:hover {
 .table thead th { position: sticky; top: 0; background: var(--color-surface); z-index: 1; }
 .table tbody tr:nth-child(odd) { background: rgba(0,0,0,.02); }
 .table tbody tr:hover { background: rgba(0,0,0,.04); }
+
+/* Mobile: better table readability */
+@media (max-width: 600px) {
+  .table th, .table td {
+    padding: 10px 8px;
+    font-size: 14px;
+  }
+  
+  .table thead th {
+    font-size: 13px;
+  }
+}
 .empty { padding: 16px; text-align: center; opacity: .7; }
 .kid-gifts-header { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 10px; font-size: 14px; }
 .kid-gifts-header .count { background: rgba(15,109,78,0.12); color: var(--color-primary); border: 1px solid var(--color-border); padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }

@@ -17,10 +17,74 @@
     @media (max-width: 700px) {
       #myGiftsList, #selectedKidGifts, #shoppingListContainer { grid-template-columns: 1fr; }
     }
-    /* Ensure cards fill their grid cell */
-    .gift-item { width: 100%; box-sizing: border-box; position: relative; padding-right: 96px; }
-    .gift-item .gift-item-actions { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); margin-left: 0 !important; }
-    .gift-item .btn-icon { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+    
+    /* Ensure cards fill their grid cell and buttons are always visible */
+    .gift-item { 
+      width: 100%; 
+      box-sizing: border-box; 
+      position: relative; 
+      padding-right: 80px; /* Space for buttons */
+      min-height: 60px; /* Ensure minimum height for button alignment */
+    }
+    
+    .gift-item .gift-item-info {
+      max-width: 100%;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      word-break: break-word;
+    }
+    
+    .gift-item .gift-item-info h3,
+    .gift-item .gift-item-info p {
+      max-width: 100%;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      word-break: break-word;
+    }
+    
+    .gift-item .gift-item-actions { 
+      position: absolute; 
+      right: 8px; 
+      top: 50%; 
+      transform: translateY(-50%); 
+      margin-left: 0 !important;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 10;
+    }
+    
+    .gift-item .btn-icon { 
+      width: 32px; 
+      height: 32px; 
+      display: inline-flex; 
+      align-items: center; 
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    /* Mobile: stack buttons vertically and ensure text doesn't overlap */
+    @media (max-width: 600px) {
+      .gift-item { 
+        padding-right: 48px; /* Narrower button area on mobile */
+        min-height: 70px;
+      }
+      
+      .gift-item .gift-item-actions {
+        right: 6px;
+        gap: 4px;
+      }
+      
+      .gift-item .btn-icon {
+        width: 36px;
+        height: 36px;
+      }
+      
+      /* Ensure text has proper margin on mobile */
+      .gift-item .gift-item-info {
+        padding-right: 4px;
+      }
+    }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
@@ -118,11 +182,11 @@
           <button type="submit" class="btn-primary">Add Gift</button>
         </form>
         <div style="display:flex; align-items:center; gap:12px; margin:4px 0 12px 0; flex-wrap:wrap;" id="multiSelectBar">
-          <button type="button" id="multiSelectToggle" class="btn-secondary" style="font-size:13px; padding:6px 10px;">Select Multiple</button>
-          <div id="multiSelectActions" style="display:none; gap:8px; align-items:center;">
+          <button type="button" id="multiSelectToggle" class="btn-secondary" style="font-size:13px; padding:8px 12px;">Select Multiple</button>
+          <div id="multiSelectActions" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
             <span id="multiSelectCount" style="font-size:12px; opacity:.75;">0 selected</span>
-            <button type="button" id="multiDeleteBtn" class="btn-delete" style="padding:6px 10px; font-size:13px;">Delete Selected</button>
-            <button type="button" id="multiCancelBtn" class="btn-secondary" style="font-size:13px; padding:6px 10px;">Cancel</button>
+            <button type="button" id="multiDeleteBtn" class="btn-delete" style="padding:8px 12px; font-size:13px;">Delete Selected</button>
+            <button type="button" id="multiCancelBtn" class="btn-secondary" style="font-size:13px; padding:8px 12px;">Cancel</button>
           </div>
         </div>
         <div id="myGiftsList" class="gifts-list"></div>
