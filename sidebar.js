@@ -183,10 +183,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         sidebar.classList.add('open');
         backdrop?.classList.add('active');
+        // Prevent body scroll on mobile when sidebar is open
+        if (window.innerWidth <= 900) {
+            document.body.style.overflow = 'hidden';
+        }
     }
     function closeDrawer() {
         sidebar?.classList.remove('open');
         backdrop?.classList.remove('active');
+        // Restore body scroll
+        document.body.style.overflow = '';
     }
     mobileBtn?.addEventListener('click', (e) => {
         e.preventDefault();
@@ -582,7 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display:flex; gap:12px; align-items:center; width:100%;">\n                      <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">\n                        <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">\n                          <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">\n                        </div>\n                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">\n                          <h3 style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${titleText}<\/h3>\n                          <p class="gift-link" style="margin:0; color:#4b5563; font-size:13px;">${dom} ↗<\/p>\n                        <\/div>\n                      <\/a>\n                      <div class="gift-item-actions" style="margin-left:auto;">\n                        ${claimerLabel && !isMine ? claimerLabel : ''}\n                        ${actionHtml}\n                        ${isCreator ? `<button class="btn-icon btn-delete-kid-dev" aria-label="Delete suggestion" data-id="${g.id}" data-kid="${kidId}">${deleteSvg()}<\/button>` : ''}\n                      <\/div>\n                    <\/div>`;
                 } else {
                     el.innerHTML = `
-                      <div class="gift-item-info">\n                        <h3>${g.name}<\/h3>\n                      <\/div>\n                      <div class="gift-item-actions" style="margin-left:auto;">\n                        ${claimerLabel && !isMine ? claimerLabel : ''}\n                        ${actionHtml}\n                        ${isCreator ? `<button class="btn-icon btn-delete-kid-dev" aria-label="Delete suggestion" data-id="${g.id}" data-kid="${kidId}">${deleteSvg()}<\/button>` : ''}\n                      <\/div>`;
+                      <div style="display:flex; gap:8px; align-items:center; width:100%;">\n                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0; max-width:calc(100% - 120px);">\n                          <h3 style="margin:0; overflow-wrap:break-word; word-wrap:break-word; word-break:break-word;">${g.name}<\/h3>\n                        <\/div>\n                        <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-shrink:0;">\n                          ${claimerLabel && !isMine ? claimerLabel : ''}\n                          ${actionHtml}\n                          ${isCreator ? `<button class="btn-icon btn-delete-kid-dev" aria-label="Delete suggestion" data-id="${g.id}" data-kid="${kidId}">${deleteSvg()}<\/button>` : ''}\n                        <\/div>\n                      <\/div>`;
                 }
                 if (kidsMultiSelectMode) {
                   const box = document.createElement('span');
@@ -731,7 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     el.className = 'gift-item compact gift-claimed-mine';
                     el.innerHTML = `
-                      <div class="gift-item-info">\n                        <h3>${g.name}${titleSuffix}<\/h3>\n                      <\/div>\n                      <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">\n                        <span class="claimer-badge" title="You claimed this">You<\/span>\n                        <button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${g.kid_id}">${unclaimSvg()}<\/button>\n                      <\/div>`;
+                      <div style="display:flex; gap:8px; align-items:center; width:100%;">\n                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0; max-width:calc(100% - 120px);">\n                          <h3 style="margin:0; overflow-wrap:break-word; word-wrap:break-word; word-break:break-word;">${g.name}${titleSuffix}<\/h3>\n                        <\/div>\n                        <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-shrink:0;">\n                          <span class="claimer-badge" title="You claimed this">You<\/span>\n                          <button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${g.kid_id}">${unclaimSvg()}<\/button>\n                        <\/div>\n                      <\/div>`;
                 }
                 container.appendChild(el);
             }
@@ -800,12 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // In Shopping List, do not apply claimed highlight styles
                     el.className = 'gift-item compact';
                     el.innerHTML = `
-                      <div class="gift-item-info">
-                        <h3>${g.name}${titleSuffix}<\/h3>
-                      <\/div>
-                      <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">
-                        <button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${g.kid_id}">${unclaimSvg()}<\/button>
-                      <\/div>`;
+                      <div style="display:flex; gap:8px; align-items:center; width:100%;">\n                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0; max-width:calc(100% - 80px);">\n                          <h3 style="margin:0; overflow-wrap:break-word; word-wrap:break-word; word-break:break-word;">${g.name}${titleSuffix}<\/h3>\n                        <\/div>\n                        <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-shrink:0;">\n                          <button class="btn-icon btn-unclaim-kid unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-kid="${g.kid_id}">${unclaimSvg()}<\/button>\n                        <\/div>\n                      <\/div>`;
                 }
                 shoppingListContainer.appendChild(el);
             }
@@ -1036,8 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('click', () => {
             // Only relevant on mobile widths, but harmless otherwise
             if (sidebar?.classList.contains('open')) {
-                sidebar.classList.remove('open');
-                backdrop?.classList.remove('active');
+                closeDrawer();
             }
         });
     });
@@ -1115,8 +1115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             // Also close mobile drawer on Esc
             if (sidebar?.classList.contains('open')) {
-                sidebar.classList.remove('open');
-                backdrop?.classList.remove('active');
+                closeDrawer();
             }
         }
     });
