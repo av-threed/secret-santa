@@ -10,6 +10,7 @@ create index if not exists link_previews_fetched_at_idx on link_previews (fetche
 create extension if not exists "uuid-ossp";
 
 -- Drop existing tables if they exist in the correct order
+drop table if exists parent_gifts cascade;
 drop table if exists kid_gifts cascade;
 drop table if exists gifts cascade;
 drop table if exists kids cascade;
@@ -50,10 +51,29 @@ create table kid_gifts (
 create unique index if not exists kid_gifts_kid_name_unique
 on kid_gifts (kid_id, lower(name));
 
+create table parent_gifts (
+    id uuid default uuid_generate_v4() primary key,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    parent_name text not null check (parent_name in ('Mom', 'Dad')),
+    created_by uuid references auth.users not null,
+    name text not null,
+    price text,
+    link text,
+    notes text,
+    -- Claiming support
+    claimed_by uuid references auth.users,
+    claimed_at timestamp with time zone
+);
+
+-- Prevent duplicate suggestions per parent by name (case-insensitive)
+create unique index if not exists parent_gifts_parent_name_unique
+on parent_gifts (parent_name, lower(name));
+
 -- Enable Row Level Security
 alter table kids enable row level security;
 alter table gifts enable row level security;
 alter table kid_gifts enable row level security;
+alter table parent_gifts enable row level security;
 
 -- Policies for kids table
 create policy "Anyone can read kids"
@@ -89,6 +109,8 @@ create policy "Authenticated users can read gifts"
 -- Helpful indexes
 create index if not exists kid_gifts_kid_id_idx on kid_gifts (kid_id);
 create index if not exists kid_gifts_claimed_by_idx on kid_gifts (claimed_by);
+create index if not exists parent_gifts_parent_name_idx on parent_gifts (parent_name);
+create index if not exists parent_gifts_claimed_by_idx on parent_gifts (claimed_by);
 
 -- Policies for kid_gifts table
 -- 1) Anyone (even anon) can read suggestions
@@ -126,6 +148,38 @@ create policy "Authenticated users can unclaim their kid gift"
 -- Note: The two claim/unclaim policies above intentionally allow updates only
 -- when transitioning between null <-> auth.uid(). Application code should only
 -- modify the claim fields during these operations.
+
+-- Policies for parent_gifts table
+-- 1) Anyone can read parent gift suggestions
+create policy "Anyone can read parent gifts"
+    on parent_gifts for select
+    using (true);
+
+-- 2) Creators can insert/update/delete their own suggestions
+create policy "Creators manage their parent gifts"
+    on parent_gifts for insert
+    with check (auth.uid() = created_by);
+
+create policy "Creators update their parent gifts"
+    on parent_gifts for update
+    using (auth.uid() = created_by)
+    with check (auth.uid() = created_by);
+
+create policy "Creators delete their parent gifts"
+    on parent_gifts for delete
+    using (auth.uid() = created_by);
+
+-- 3) Any authenticated user can claim an unclaimed suggestion
+create policy "Authenticated users can claim parent gifts"
+    on parent_gifts for update to authenticated
+    using (claimed_by is null)
+    with check (claimed_by = auth.uid());
+
+-- 4) The current claimer can unclaim their own claim
+create policy "Authenticated users can unclaim their parent gift"
+    on parent_gifts for update to authenticated
+    using (claimed_by = auth.uid())
+    with check (claimed_by is null);
    
 -- App settings for current year and assignment lock
 create table if not exists app_settings (

@@ -8,14 +8,14 @@
   <script src="sidebar.js" type="module"></script>
   <style>
     /* Production: two-up grid layout in gift list modals */
-    #myGiftsList, #selectedKidGifts, #shoppingListContainer {
+    #myGiftsList, #selectedKidGifts, #selectedParentGifts, #shoppingListContainer {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
       align-items: stretch;
     }
     @media (max-width: 700px) {
-      #myGiftsList, #selectedKidGifts, #shoppingListContainer { grid-template-columns: 1fr; }
+      #myGiftsList, #selectedKidGifts, #selectedParentGifts, #shoppingListContainer { grid-template-columns: 1fr; }
     }
     
     /* Kids gift list cards: Ensure proper layout with flex */
@@ -58,6 +58,13 @@
           <path fill="currentColor" d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" />
         </svg>
         Kids Gift Lists
+      </button>
+
+      <button id="parentsGiftList" class="sidebar-button">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M20,6H12L10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6M12,18H6V16H12V18M18,14H6V12H18V14M20,10H6V8H20V10Z" />
+        </svg>
+        Parents Gift List
       </button>
 
       <button id="shoppingListBtn" class="sidebar-button">
@@ -148,6 +155,27 @@
           </select>
         </div>
         <div id="selectedKidGifts" class="gifts-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Parents Gift List Modal -->
+  <div id="parentsGiftListModal" class="modal modal--wide">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Parents Gift List</h2>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="parentSelector">Which parent's gifts?</label>
+          <select id="parentSelector">
+            <option value="">Select a parent...</option>
+            <option value="Mom">Mom</option>
+            <option value="Dad">Dad</option>
+          </select>
+        </div>
+        <div id="selectedParentGifts" class="gifts-list"></div>
       </div>
     </div>
   </div>
@@ -307,6 +335,44 @@
 
       <button type="submit" class="submit-btn">Add Gift Suggestions</button>
     </form>
+
+    <!-- Parents Gift Form -->
+    <form id="parentsGiftForm" class="gift-form parents-form">
+      <h3 class="form-title">Parents Gift Ideas</h3>
+      <p class="helper-text">Add gift ideas for your parents. Switch to Link for a specific product.</p>
+      
+      <div class="form-group">
+        <label for="parentSelect">Which parent are these ideas for?</label>
+        <select id="parentSelect" name="parentName" required>
+          <option value="">Select a parent...</option>
+          <option value="Mom">Mom</option>
+          <option value="Dad">Dad</option>
+        </select>
+      </div>
+
+      <!-- Parents submission mode toggle (segmented style) -->
+      <div class="form-group" style="margin:8px 0 14px 0; display:flex;align-items:center;gap:12px;">
+        <label style="font-weight:600;">Add as:</label>
+        <div class="segmented" id="parentsModeToggle" role="radiogroup" aria-label="Add as" data-mode="idea">
+          <span class="segmented-indicator"></span>
+          <button type="button" class="segment" data-mode="idea" role="radio" aria-checked="true">Idea</button>
+          <button type="button" class="segment" data-mode="link" role="radio" aria-checked="false">Link</button>
+        </div>
+        <input type="hidden" id="parentsModeHidden" value="idea">
+      </div>
+      <div id="devParentsIdeaFields" class="form-group">
+        <label for="parentsGiftIdeas">Gift Ideas for Selected Parent:</label>
+        <textarea id="parentsGiftIdeas" name="giftIdeas" rows="4" placeholder="Enter gift suggestions for this parent (one per line)..." required></textarea>
+      </div>
+      <div id="devParentsLinkFields" class="form-group" style="display:none;">
+        <label for="devParentLinkUrl">Product link (http/https):</label>
+        <input type="url" id="devParentLinkUrl" pattern="https?://.*">
+        <label for="devParentLinkCaption" style="margin-top:8px;">Optional caption/title:</label>
+        <input type="text" id="devParentLinkCaption">
+      </div>
+
+      <button type="submit" class="submit-btn">Add Parent Gift Ideas</button>
+    </form>
   </div>
 
   <!-- SVG Icons Container -->
@@ -326,7 +392,7 @@
   <script type="module" src="auth.js"></script>
   <!-- Production script: link mode, link cards, edit modal, claim/unclaim (includes offline fallback) -->
   <script type="module">
-    import { supabase, addGiftToList, getCurrentUser, getMyGifts, addKidGift, getKidGifts, deleteKidGift, getKids, findOrCreateKid } from './supabase.js';
+    import { supabase, addGiftToList, getCurrentUser, getMyGifts, addKidGift, getKidGifts, deleteKidGift, getKids, findOrCreateKid, addParentGift } from './supabase.js';
     import { showToast, confirmDialog, editGiftDialog, inputDialog } from './ui.js';
 
   const adultForm = document.getElementById('adultGiftForm');
@@ -353,6 +419,15 @@
     const kidUrlInput = document.getElementById('devKidLinkUrl');
     const kidCaptionInput = document.getElementById('devKidLinkCaption');
     const kidsTextarea = document.getElementById('kidsGiftIdeas');
+  const parentsForm = document.getElementById('parentsGiftForm');
+  const parentSelect = document.getElementById('parentSelect');
+  const parentsModeToggle = document.getElementById('parentsModeToggle');
+  const parentsModeHidden = document.getElementById('parentsModeHidden');
+    const parentsIdeaFields = document.getElementById('devParentsIdeaFields');
+    const parentsLinkFields = document.getElementById('devParentsLinkFields');
+    const parentUrlInput = document.getElementById('devParentLinkUrl');
+    const parentCaptionInput = document.getElementById('devParentLinkCaption');
+    const parentsTextarea = document.getElementById('parentsGiftIdeas');
 
     function setGiftMode(mode, {auto=false}={}) {
       giftModeHidden.value = mode;
@@ -498,6 +573,84 @@
         showToast(successCount > 0 ? 'Suggestions added' : 'No new suggestions (duplicates ignored)');
       } catch (e2) {
         console.error('Failed to add kid suggestions', e2);
+        showToast(`Failed to add suggestions: ${e2.message || 'Unknown error'}`, 'error');
+      }
+    });
+
+    // Parents: segmented mode logic
+    function getSelectedParentsMode(){ return parentsModeHidden?.value || 'idea'; }
+    function setParentsModeUI(mode){
+      if(!parentsIdeaFields||!parentsLinkFields) return;
+      parentsModeHidden.value = mode;
+      parentsModeToggle.dataset.mode = mode;
+      parentsModeToggle.querySelectorAll('.segment').forEach(btn=>{
+        btn.setAttribute('aria-checked', btn.dataset.mode===mode ? 'true':'false');
+      });
+      if(mode==='link'){
+        parentsIdeaFields.style.display='none';
+        parentsLinkFields.style.display='';
+        if(parentsTextarea) parentsTextarea.required=false;
+        if(parentUrlInput) parentUrlInput.required=true;
+      } else {
+        parentsIdeaFields.style.display='';
+        parentsLinkFields.style.display='none';
+        if(parentsTextarea) parentsTextarea.required=true;
+        if(parentUrlInput) parentUrlInput.required=false;
+      }
+    }
+    parentsModeToggle?.addEventListener('click', e=>{ const btn=e.target.closest('.segment'); if(!btn) return; setParentsModeUI(btn.dataset.mode); });
+    parentsModeToggle?.addEventListener('keydown', e=>{ if(!['ArrowLeft','ArrowRight'].includes(e.key)) return; e.preventDefault(); const next = getSelectedParentsMode()==='idea'?'link':'idea'; setParentsModeUI(next); parentsModeToggle.querySelector(`.segment[data-mode="${next}"]`)?.focus(); });
+    setParentsModeUI('idea');
+
+    // Parents gift suggestions submit (supports Idea + Link modes)
+    parentsForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const parentName = parentSelect.value;
+      if (!parentName) { showToast('Select a parent', 'error'); return; }
+
+      const mode = getSelectedParentsMode();
+
+      try {
+        if (mode === 'link') {
+          const rawUrl = (parentUrlInput.value || '').trim();
+          if (!rawUrl) { showToast('Enter a product link', 'error'); return; }
+          const normalized = normalizeUrl(rawUrl);
+          if (!normalized) {
+            showToast('Enter a valid http/https link', 'error');
+            parentUrlInput.classList.add('url-invalid');
+            return;
+          }
+          parentUrlInput.classList.remove('url-invalid');
+          const caption = (parentCaptionInput.value || '').trim();
+          const name = caption || new URL(normalized).hostname.replace(/^www\./, '');
+          await addParentGift(parentName, { name, link: normalized });
+          parentUrlInput.value = '';
+          parentCaptionInput.value = '';
+          showToast('Link added');
+          window.dispatchEvent(new CustomEvent('parent-gifts-updated', { detail: { parentName } }));
+          return;
+        }
+
+        // Idea mode
+        const raw = parentsTextarea.value;
+        const lines = (raw || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        if (!lines.length) { showToast('Nothing to add', 'error'); return; }
+        let successCount = 0;
+        for (const line of lines) {
+          try {
+            await addParentGift(parentName, { name: line });
+            successCount++;
+          } catch (err) {
+            const msg = String(err?.message || '').toLowerCase();
+            if (err?.code === '23505' || msg.includes('duplicate key') || msg.includes('already exists')) continue;
+            throw err;
+          }
+        }
+        parentsTextarea.value = '';
+        window.dispatchEvent(new CustomEvent('parent-gifts-updated', { detail: { parentName } }));
+        showToast(successCount > 0 ? 'Suggestions added' : 'No new suggestions (duplicates ignored)');
+      } catch (e2) {
+        console.error('Failed to add parent suggestions', e2);
         showToast(`Failed to add suggestions: ${e2.message || 'Unknown error'}`, 'error');
       }
     });

@@ -1,5 +1,5 @@
 // Import Supabase functions
-import { getMyGifts, deleteGift, addGiftToList, signOut as supaSignOut, getKids, getKidGifts, deleteKidGift, getRecipientForBuyer, getUserGifts, getProfile, listProfilesExcludingSelf, upsertMyRecipient, isAssignmentsLocked } from './supabase.js';
+import { getMyGifts, deleteGift, addGiftToList, signOut as supaSignOut, getKids, getKidGifts, deleteKidGift, getRecipientForBuyer, getUserGifts, getProfile, listProfilesExcludingSelf, upsertMyRecipient, isAssignmentsLocked, getParentGifts, deleteParentGift } from './supabase.js';
 import { confirmDialog, showToast, editGiftDialog } from './ui.js';
 
 // Sidebar functionality
@@ -11,12 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarPin = document.getElementById('sidebarPin');
     const myGiftListBtn = document.getElementById('myGiftList');
     const kidsGiftListBtn = document.getElementById('kidsGiftList');
+    const parentsGiftListBtn = document.getElementById('parentsGiftList');
     const shoppingListBtn = document.getElementById('shoppingListBtn');
     const recipientGiftsBtn = document.getElementById('recipientGifts');
     const setRecipientBtn = document.getElementById('setRecipient');
     const settingsBtn = document.getElementById('settingsBtn');
     const myGiftListModal = document.getElementById('myGiftListModal');
     const kidsGiftListModal = document.getElementById('kidsGiftListModal');
+    const parentsGiftListModal = document.getElementById('parentsGiftListModal');
     const shoppingListModal = document.getElementById('shoppingListModal');
     const recipientGiftsModal = document.getElementById('recipientGiftsModal');
     const setRecipientModal = document.getElementById('setRecipientModal');
@@ -31,6 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const addGiftForm = document.getElementById('addGiftForm');
     const kidSelector = document.getElementById('kidSelector');
     const selectedKidGifts = document.getElementById('selectedKidGifts');
+    const parentSelector = document.getElementById('parentSelector');
+    const selectedParentGifts = document.getElementById('selectedParentGifts');
     const recipientHeader = document.getElementById('recipientHeader');
     const recipientGiftsList = document.getElementById('recipientGiftsList');
     const recipientSelect = document.getElementById('recipientSelect');
@@ -122,6 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Guard to avoid attaching duplicate delegated handlers
     let kidsDeleteBound = false;
     let kidsClaimBound = false;
+    let parentsDeleteBound = false;
+    let parentsClaimBound = false;
     let shoppingClaimBound = false;
 
     // Settings helpers
@@ -765,6 +771,160 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function loadParentGifts(parentName) {
+        if (!parentName) { selectedParentGifts.innerHTML = ''; return; }
+        try {
+            // Determine current user id for claim ownership
+            let me = null; let myProfileName = '';
+            try {
+                const { supabase } = await import('./supabase.js');
+                const { data: userData } = await supabase.auth.getUser();
+                me = userData?.user?.id || null;
+                if (me) {
+                    try { const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', me).single(); myProfileName = prof?.full_name || ''; } catch {}
+                }
+            } catch {}
+            const gifts = await getParentGifts(parentName);
+            selectedParentGifts.innerHTML = '';
+            if (!gifts || gifts.length === 0) {
+                selectedParentGifts.innerHTML = '<p class="no-gifts-message">No gift ideas yet.</p>';
+                return;
+            }
+            gifts.forEach(g => {
+                const el = document.createElement('div');
+                const link = g.link || extractLinkFromName(g.name);
+                const hasLink = !!link;
+                const isClaimed = !!g.claimed_by;
+                const isMine = isClaimed && me && String(g.claimed_by) === String(me);
+                const isCreator = me && String(g.created_by) === String(me);
+                
+                let itemStateClass = 'gift-unclaimed';
+                if (isClaimed && isMine) itemStateClass = 'gift-claimed-mine';
+                else if (isClaimed) itemStateClass = 'gift-claimed-other';
+                el.className = `gift-item ${itemStateClass} ${hasLink ? 'link-card' : 'compact'}`;
+                
+                let claimerLabel = '';
+                if (isClaimed && !isMine) {
+                    const full = g.full_name || '';
+                    const shortened = full ? full.split(/\s+/).slice(0, 2).join(' ') : 'Someone';
+                    claimerLabel = `<span class="claimer-badge other" title="${full || 'Claimed by another user'}">${shortened}</span>`;
+                } else if (isClaimed && isMine) {
+                    claimerLabel = `<span class="claimer-badge" title="You claimed this">You</span>`;
+                }
+                
+                const actionHtml = (() => {
+                    if (!isClaimed) {
+                        return `<button class="btn-icon btn-claim-parent claim-btn" aria-label="Claim gift: ${g.name}" data-id="${g.id}" data-parent="${parentName}">${claimSvg()}</button>`;
+                    }
+                    if (isMine) {
+                        return `<button class="btn-icon btn-unclaim-parent unclaim-btn" aria-label="Unclaim gift: ${g.name}" data-id="${g.id}" data-parent="${parentName}">${unclaimSvg()}</button>`;
+                    }
+                    return `<span class="claim-status-text" role="status">${claimerLabel || 'Claimed'}</span>`;
+                })();
+                
+                if (hasLink) {
+                    const dom = domainFromUrl(link);
+                    const titleText = String(g.name||'').replace(/\s*\((https?:[^)]+)\)\s*$/i,'').trim() || '(Link)';
+                    el.innerHTML = `
+                    <div style="display:flex; gap:12px; align-items:center; width:100%;">
+                      <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">
+                        <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                          <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">
+                        </div>
+                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">
+                          <h3 style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${titleText}</h3>
+                          <p class="gift-link" style="margin:0; color:#4b5563; font-size:13px;">${dom} ↗</p>
+                        </div>
+                      </a>
+                      <div class="gift-item-actions" style="margin-left:auto;">
+                        ${claimerLabel && !isMine ? claimerLabel : ''}
+                        ${actionHtml}
+                        ${isCreator ? `<button class="btn-icon btn-delete-parent-dev" aria-label="Delete gift" data-id="${g.id}" data-parent="${parentName}">${deleteSvg()}</button>` : ''}
+                      </div>
+                    </div>`;
+                } else {
+                    el.innerHTML = `
+                      <div class="gift-item-info">
+                        <h3>${g.name}</h3>
+                      </div>
+                      <div class="gift-item-actions" style="margin-left:auto;">
+                        ${claimerLabel && !isMine ? claimerLabel : ''}
+                        ${actionHtml}
+                        ${isCreator ? `<button class="btn-icon btn-delete-parent-dev" aria-label="Delete gift" data-id="${g.id}" data-parent="${parentName}">${deleteSvg()}</button>` : ''}
+                      </div>`;
+                }
+                selectedParentGifts.appendChild(el);
+            });
+            
+            // Delegated delete (attach once)
+            if (!parentsDeleteBound) {
+                selectedParentGifts.addEventListener('click', async (ev) => {
+                    const btn = ev.target.closest('.btn-delete-parent-dev');
+                    if (!btn) return;
+                    const id = btn.getAttribute('data-id');
+                    const currentParentName = parentSelector.value;
+                    const ok = await confirmDialog({ title: 'Delete Gift', message: 'Delete this gift idea?', confirmText: 'Delete' });
+                    if (!ok) return;
+                    try {
+                        await deleteParentGift(id);
+                        showToast('Deleted');
+                        loadParentGifts(currentParentName);
+                    } catch (e) { showToast('Failed to delete', 'error'); }
+                });
+                parentsDeleteBound = true;
+            }
+
+            // Delegated claim/unclaim (attach once)
+            if (!parentsClaimBound) {
+                async function claimParentGift(idAttr, currentParentName, btnEl) {
+                    try {
+                        const { supabase } = await import('./supabase.js');
+                        const { data: userData } = await supabase.auth.getUser();
+                        const me = userData?.user?.id;
+                        if (!me) { showToast('Sign in to claim', 'error'); return false; }
+                        const { data, error } = await supabase.rpc('claim_parent_gift', { p_id: idAttr });
+                        if (error) throw error;
+                        if (!data) { showToast('Already claimed by someone else', 'error'); return false; }
+                        showToast('Claimed');
+                        return true;
+                    } catch (e) { console.error(e); showToast('Failed to claim', 'error'); return false; }
+                }
+                async function unclaimParentGift(idAttr, currentParentName, btnEl) {
+                    try {
+                        const { supabase } = await import('./supabase.js');
+                        const { data: userData } = await supabase.auth.getUser();
+                        const me = userData?.user?.id;
+                        if (!me) { showToast('Sign in to unclaim', 'error'); return false; }
+                        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idAttr);
+                        if (!isUuid) { showToast('Could not unclaim (invalid id)', 'error'); return false; }
+                        if (btnEl) btnEl.disabled = true;
+                        const { data, error } = await supabase.rpc('unclaim_parent_gift', { p_id: idAttr });
+                        if (btnEl) btnEl.disabled = false;
+                        if (error) throw error;
+                        if (!data) { showToast('Cannot unclaim (not yours)', 'error'); return false; }
+                        showToast('Unclaimed');
+                        return true;
+                    } catch (e) { console.error(e); if (btnEl) btnEl.disabled = false; showToast('Failed to unclaim', 'error'); return false; }
+                }
+                selectedParentGifts.addEventListener('click', async (ev) => {
+                    const claimBtn = ev.target.closest('.btn-claim-parent');
+                    const unclaimBtn = ev.target.closest('.btn-unclaim-parent');
+                    if (!claimBtn && !unclaimBtn) return;
+                    const btn = claimBtn || unclaimBtn;
+                    const idAttr = btn.getAttribute('data-id');
+                    const currentParentName = btn.getAttribute('data-parent') || parentSelector.value;
+                    btn.classList.add('is-loading');
+                    const ok = claimBtn
+                      ? await claimParentGift(idAttr, currentParentName, btn)
+                      : await unclaimParentGift(idAttr, currentParentName, btn);
+                    btn.classList.remove('is-loading');
+                    if (ok) loadParentGifts(currentParentName);
+                });
+                parentsClaimBound = true;
+            }
+        } catch (e) { console.error('Failed to load parent gifts', e); }
+    }
+
     async function renderShoppingList() {
         try {
             if (!shoppingListContainer) return;
@@ -916,6 +1076,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedKidGifts.innerHTML = '<p class="no-gifts-message">No children yet. Use "+ Add child" to add one.</p>';
             }
         }
+        if (modal === parentsGiftListModal) {
+            selectedParentGifts.innerHTML = '';
+            // Prefer current selection from main form if available
+            const mainParentSelect = document.getElementById('parentSelect');
+            const preferred = mainParentSelect ? mainParentSelect.value : '';
+            if (preferred) {
+                parentSelector.value = preferred;
+            }
+            if (!parentSelector.value && parentSelector.options.length > 1) {
+                parentSelector.selectedIndex = 1; // first parent (Mom)
+            }
+            if (parentSelector.value) {
+                loadParentGifts(parentSelector.value);
+            } else {
+                selectedParentGifts.innerHTML = '<p class="no-gifts-message">Select a parent to view gift ideas.</p>';
+            }
+        }
         if (modal === recipientGiftsModal) {
             await loadRecipientGifts();
         }
@@ -987,12 +1164,12 @@ document.addEventListener('DOMContentLoaded', () => {
             currentModal = null;
         }
         // Clear active state when closing any modal
-        [myGiftListBtn, kidsGiftListBtn, shoppingListBtn, recipientGiftsBtn, setRecipientBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
+        [myGiftListBtn, kidsGiftListBtn, parentsGiftListBtn, shoppingListBtn, recipientGiftsBtn, setRecipientBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
     }
 
     // Open modals from sidebar buttons
     const markActive = (btn) => {
-        [myGiftListBtn, kidsGiftListBtn, shoppingListBtn, recipientGiftsBtn, setRecipientBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
+        [myGiftListBtn, kidsGiftListBtn, parentsGiftListBtn, shoppingListBtn, recipientGiftsBtn, setRecipientBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
         btn && btn.classList.add('active');
     };
 
@@ -1006,6 +1183,12 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         markActive(kidsGiftListBtn);
         await openModal(kidsGiftListModal);
+    });
+
+    parentsGiftListBtn?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        markActive(parentsGiftListBtn);
+        await openModal(parentsGiftListModal);
     });
 
     shoppingListBtn?.addEventListener('click', async (e) => {
@@ -1095,6 +1278,15 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('kid-gifts-updated', (e) => {
         const kidId = e.detail?.kidId || kidSelector.value;
         if (kidId) loadKidGifts(kidId);
+    });
+
+    parentSelector?.addEventListener('change', (e) => {
+        loadParentGifts(e.target.value);
+    });
+
+    window.addEventListener('parent-gifts-updated', (e) => {
+        const parentName = e.detail?.parentName || parentSelector.value;
+        if (parentName) loadParentGifts(parentName);
     });
 
     // Close button functionality

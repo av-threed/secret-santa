@@ -142,6 +142,60 @@ export async function deleteKidGift(giftId) {
     if (error) throw error
 }
 
+// Interface for working with parent gifts
+export async function getParentGifts(parentName) {
+    const { data, error } = await supabase
+        .from('parent_gifts')
+        .select('id, name, link, notes, price, parent_name, created_by, claimed_by, claimed_at')
+        .eq('parent_name', parentName)
+        .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    let rows = data || [];
+
+    // Best-effort enrichment: add claimer full_name from profiles (optional)
+    try {
+        const claimerIds = Array.from(new Set(rows.map(r => r.claimed_by).filter(Boolean)));
+        if (claimerIds.length) {
+            const { data: profs } = await supabase
+                .from('profiles')
+                .select('id, full_name')
+                .in('id', claimerIds);
+            const idToName = Object.fromEntries((profs || []).map(p => [p.id, p.full_name || null]));
+            rows = rows.map(r => (r.claimed_by && idToName[r.claimed_by]) ? { ...r, full_name: idToName[r.claimed_by] } : r);
+        }
+    } catch (_) { /* non-fatal */ }
+
+    return rows;
+}
+
+export async function addParentGift(parentName, giftData) {
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+    if (userError) throw userError
+    const userId = userData?.user?.id
+    if (!userId) throw new Error('Not signed in')
+
+    const { data, error } = await supabase
+        .from('parent_gifts')
+        .insert([{
+            ...giftData,
+            parent_name: parentName,
+            created_by: userId
+        }])
+
+    if (error) throw error
+    return data
+}
+
+export async function deleteParentGift(giftId) {
+    const { error } = await supabase
+        .from('parent_gifts')
+        .delete()
+        .match({ id: giftId })
+
+    if (error) throw error
+}
+
 // User session management
 export async function getCurrentUser() {
     const { data } = await supabase.auth.getUser()
