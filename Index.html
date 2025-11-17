@@ -18,72 +18,11 @@
       #myGiftsList, #selectedKidGifts, #shoppingListContainer { grid-template-columns: 1fr; }
     }
     
-    /* Ensure cards fill their grid cell and buttons are always visible */
-    .gift-item { 
-      width: 100%; 
-      box-sizing: border-box; 
-      position: relative; 
-      padding-right: 80px; /* Space for buttons */
-      min-height: 60px; /* Ensure minimum height for button alignment */
-    }
-    
-    .gift-item .gift-item-info {
-      max-width: 100%;
-      overflow-wrap: break-word;
-      word-wrap: break-word;
-      word-break: break-word;
-    }
-    
-    .gift-item .gift-item-info h3,
-    .gift-item .gift-item-info p {
-      max-width: 100%;
-      overflow-wrap: break-word;
-      word-wrap: break-word;
-      word-break: break-word;
-    }
-    
-    .gift-item .gift-item-actions { 
-      position: absolute; 
-      right: 8px; 
-      top: 50%; 
-      transform: translateY(-50%); 
-      margin-left: 0 !important;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      z-index: 10;
-    }
-    
-    .gift-item .btn-icon { 
-      width: 32px; 
-      height: 32px; 
-      display: inline-flex; 
-      align-items: center; 
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    
-    /* Mobile: stack buttons vertically and ensure text doesn't overlap */
-    @media (max-width: 600px) {
-      .gift-item { 
-        padding-right: 48px; /* Narrower button area on mobile */
-        min-height: 70px;
-      }
-      
-      .gift-item .gift-item-actions {
-        right: 6px;
-        gap: 4px;
-      }
-      
-      .gift-item .btn-icon {
-        width: 36px;
-        height: 36px;
-      }
-      
-      /* Ensure text has proper margin on mobile */
-      .gift-item .gift-item-info {
-        padding-right: 4px;
-      }
+    /* Kids gift list cards: Ensure proper layout with flex */
+    #selectedKidGifts .gift-item,
+    #shoppingListContainer .gift-item {
+      width: 100%;
+      box-sizing: border-box;
     }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1">
