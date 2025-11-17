@@ -14,6 +14,7 @@ export async function handleSignUp(email, password, fullName) {
             email,
             password,
             options: {
+                emailRedirectTo: `${window.location.origin}/signin.html`,
                 data: {
                     full_name: fullName
                 }
