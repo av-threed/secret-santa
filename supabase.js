@@ -340,6 +340,15 @@ export async function listProfilesExcludingSelf() {
     return data || [];
 }
 
+export async function getAllProfiles() {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .order('full_name', { ascending: true });
+    if (error) throw error;
+    return data || [];
+}
+
 export async function upsertMyRecipient(recipientUserId) {
     const year = await getCurrentYear();
     const { data: userData } = await supabase.auth.getUser();

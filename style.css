@@ -1140,6 +1140,119 @@ button:hover {
   background: var(--color-secondary-700);
 }
 
+/* Tag Input Component */
+.tag-input-container {
+  min-height: 120px;
+  padding: 8px;
+  border: 2px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-start;
+  cursor: text;
+  transition: border-color 0.2s;
+}
+
+.tag-input-container:focus-within {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.tag-input-container.error {
+  border-color: #dc2626;
+}
+
+.tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+  max-width: 100%;
+  word-break: break-word;
+  animation: tagFadeIn 0.2s ease;
+}
+
+@keyframes tagFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tag-item-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.tag-item-remove {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.tag-item-remove:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tag-input {
+  flex: 1 1 200px;
+  min-width: 200px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  padding: 6px 4px;
+  color: var(--color-text);
+  font-family: inherit;
+}
+
+.tag-input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+}
+
+.tag-input-hint {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+@media (max-width: 600px) {
+  .tag-input {
+    min-width: 150px;
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  .tag-item {
+    font-size: 13px;
+    padding: 5px 8px;
+  }
+}
+
 /* Utility classes */
 .hidden {
   display: none !important;
@@ -1167,6 +1280,9 @@ button:hover {
 @media (max-width: 600px) {
   .main-content {
     padding: 12px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
   
   .gift-form {
@@ -1188,6 +1304,56 @@ button:hover {
   
   .brand-title {
     font-size: 1.1rem;
+  }
+  
+  /* Make toggle button containers wrap better on small screens */
+  .form-group[style*="display:flex"] {
+    flex-wrap: wrap;
+  }
+  
+  /* Ensure proper spacing for wrapped toggle controls */
+  .form-group .segmented {
+    flex: 1 1 auto;
+    min-width: 200px;
+  }
+}
+
+/* Extra small screens (iPhone SE, small Android phones) */
+@media (max-width: 380px) {
+  .gift-form {
+    padding: 16px;
+  }
+  
+  .form-title {
+    font-size: 1.15em;
+  }
+  
+  /* Stack the "Add as:" label and toggle vertically on very small screens */
+  .form-group[style*="display:flex"] {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+  
+  .form-group .segmented {
+    width: 100%;
+    min-width: 0;
+  }
+  
+  /* Ensure buttons are full width on very small screens */
+  .submit-btn,
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+  }
+  
+  /* Reduce modal padding further */
+  .modal-body {
+    padding: 12px;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.2em;
   }
 }
 
@@ -1251,6 +1417,9 @@ button:hover {
     height: 100dvh; /* Use dynamic viewport height if available */
     max-height: 100vh;
     max-height: 100dvh;
+    /* Safe area insets for notched devices */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
   .sidebar.open {
     transform: translateX(0);
@@ -1286,6 +1455,9 @@ button:hover {
   .main-content {
     margin-left: 0;
     padding: 16px;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
   /* Ensure pinned sibling rules do not apply on mobile */
   .sidebar.pinned + .main-content,
@@ -1305,10 +1477,10 @@ button:hover {
 /* Hamburger button: always on top, even over modals */
 .hamburger {
   position: fixed;
-  left: 12px;
+  left: max(12px, env(safe-area-inset-left));
   top: calc(env(safe-area-inset-top, 0) + 12px);
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 8px;
   background: var(--color-surface); /* match app surface/background */
   color: var(--color-text);
@@ -1319,6 +1491,7 @@ button:hover {
   z-index: 1101; /* higher than .modal (1001) */
   box-shadow: 0 4px 10px rgba(0,0,0,.25);
   touch-action: manipulation;
+  font-size: 20px;
 }
 .hamburger:hover { background: var(--color-bg); }
 @media (max-width: 900px) {
@@ -1327,7 +1500,29 @@ button:hover {
 
 /* Reduce two-up grids to single column on small screens (safety net) */
 @media (max-width: 700px) {
-  #myGiftsList, #selectedKidGifts { grid-template-columns: 1fr !important; }
+  #myGiftsList, #selectedKidGifts, #selectedParentGifts { grid-template-columns: 1fr !important; }
+}
+
+/* Landscape orientation on mobile: keep forms scrollable */
+@media (max-width: 900px) and (max-height: 500px) and (orientation: landscape) {
+  .gift-form {
+    min-height: auto;
+    padding: 12px 20px;
+  }
+  
+  .form-title {
+    font-size: 1.2em;
+    margin-bottom: 8px;
+  }
+  
+  .helper-text {
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  
+  textarea {
+    min-height: 80px;
+  }
 }
 
 /* ===== Admin UI Polish ===== */

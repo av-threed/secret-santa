@@ -1,5 +1,5 @@
 // Import Supabase functions
-import { getMyGifts, deleteGift, addGiftToList, signOut as supaSignOut, getKids, getKidGifts, deleteKidGift, getRecipientForBuyer, getUserGifts, getProfile, listProfilesExcludingSelf, upsertMyRecipient, isAssignmentsLocked, getParentGifts, deleteParentGift } from './supabase.js';
+import { getMyGifts, deleteGift, addGiftToList, signOut as supaSignOut, getKids, getKidGifts, deleteKidGift, getRecipientForBuyer, getUserGifts, getProfile, listProfilesExcludingSelf, upsertMyRecipient, isAssignmentsLocked, getParentGifts, deleteParentGift, getAllProfiles } from './supabase.js';
 import { confirmDialog, showToast, editGiftDialog } from './ui.js';
 
 // Sidebar functionality
@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const shoppingListBtn = document.getElementById('shoppingListBtn');
     const recipientGiftsBtn = document.getElementById('recipientGifts');
     const setRecipientBtn = document.getElementById('setRecipient');
+    const secretSantaViewerBtn = document.getElementById('secretSantaViewerBtn');
     const settingsBtn = document.getElementById('settingsBtn');
     const myGiftListModal = document.getElementById('myGiftListModal');
     const kidsGiftListModal = document.getElementById('kidsGiftListModal');
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const shoppingListModal = document.getElementById('shoppingListModal');
     const recipientGiftsModal = document.getElementById('recipientGiftsModal');
     const setRecipientModal = document.getElementById('setRecipientModal');
+    const secretSantaViewerModal = document.getElementById('secretSantaViewerModal');
     const settingsModal = document.getElementById('settingsModal');
     const settingsForm = document.getElementById('settingsForm');
     const settingPinSidebar = document.getElementById('settingPinSidebar');
@@ -38,6 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const recipientHeader = document.getElementById('recipientHeader');
     const recipientGiftsList = document.getElementById('recipientGiftsList');
     const recipientSelect = document.getElementById('recipientSelect');
+    const santaParticipantSelect = document.getElementById('santaParticipantSelect');
+    const secretSantaGifts = document.getElementById('secretSantaGifts');
     const saveRecipientBtn = document.getElementById('saveRecipientBtn');
     const recipientStatus = document.getElementById('recipientStatus');
     const badgeMyGifts = document.getElementById('badgeMyGifts');
@@ -774,23 +778,47 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadParentGifts(parentName) {
         if (!parentName) { selectedParentGifts.innerHTML = ''; return; }
         try {
-            // Determine current user id for claim ownership
-            let me = null; let myProfileName = '';
+            // Determine current user id, email, and profile for claim ownership and parent check
+            let me = null; 
+            let myEmail = '';
+            let myProfileName = '';
+            
             try {
                 const { supabase } = await import('./supabase.js');
                 const { data: userData } = await supabase.auth.getUser();
                 me = userData?.user?.id || null;
+                myEmail = (userData?.user?.email || '').toLowerCase();
                 if (me) {
-                    try { const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', me).single(); myProfileName = prof?.full_name || ''; } catch {}
+                    try { 
+                        const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', me).single(); 
+                        myProfileName = prof?.full_name || ''; 
+                    } catch {}
                 }
             } catch {}
+            
+            // Parent emails - these users will not see claimed gifts (no spoilers!)
+            const PARENT_EMAILS = [
+                'tazdev1123@msn.com',
+                'jvillase@msn.com'
+            ];
+            
             const gifts = await getParentGifts(parentName);
+            
+            // Hide claimed gifts if current user is a parent (no spoilers!)
+            const isParent = PARENT_EMAILS.includes(myEmail);
+            const filteredGifts = isParent 
+                ? gifts.filter(g => !g.claimed_by)  // Parents only see unclaimed gifts
+                : gifts;  // Everyone else sees all gifts with claim status
+            
             selectedParentGifts.innerHTML = '';
-            if (!gifts || gifts.length === 0) {
-                selectedParentGifts.innerHTML = '<p class="no-gifts-message">No gift ideas yet.</p>';
+            if (!filteredGifts || filteredGifts.length === 0) {
+                const message = isParent && gifts.length > 0 
+                    ? '<p class="no-gifts-message">All gift ideas have been claimed! 🎁</p>'
+                    : '<p class="no-gifts-message">No gift ideas yet.</p>';
+                selectedParentGifts.innerHTML = message;
                 return;
             }
-            gifts.forEach(g => {
+            filteredGifts.forEach(g => {
                 const el = document.createElement('div');
                 const link = g.link || extractLinkFromName(g.name);
                 const hasLink = !!link;
@@ -923,6 +951,109 @@ document.addEventListener('DOMContentLoaded', () => {
                 parentsClaimBound = true;
             }
         } catch (e) { console.error('Failed to load parent gifts', e); }
+    }
+
+    async function populateSecretSantaParticipants() {
+        if (!santaParticipantSelect) return;
+        try {
+            santaParticipantSelect.innerHTML = '<option value="">Choose someone...</option>';
+            const profiles = await getAllProfiles();
+            profiles.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.full_name || 'Unnamed User';
+                santaParticipantSelect.appendChild(opt);
+            });
+        } catch (e) {
+            console.error('Failed to load participants', e);
+            santaParticipantSelect.innerHTML = '<option value="">Error loading participants</option>';
+        }
+    }
+
+    async function loadSecretSantaGifts(userId) {
+        if (!userId || !secretSantaGifts) return;
+        
+        try {
+            secretSantaGifts.innerHTML = '<p class="no-gifts-message">Loading gifts...</p>';
+            
+            // Get user's name for display
+            const profile = await getProfile(userId);
+            const userName = profile?.full_name || 'User';
+            
+            // Get user's gifts
+            const gifts = await getUserGifts(userId);
+            
+            // Get current user for claim status
+            let me = null;
+            try {
+                const { supabase } = await import('./supabase.js');
+                const { data: userData } = await supabase.auth.getUser();
+                me = userData?.user?.id || null;
+            } catch {}
+            
+            secretSantaGifts.innerHTML = '';
+            
+            if (!gifts || gifts.length === 0) {
+                secretSantaGifts.innerHTML = `<p class="no-gifts-message">${userName} hasn't added any gift ideas yet.</p>`;
+                return;
+            }
+            
+            // Render gifts in read-only mode
+            gifts.forEach(g => {
+                const el = document.createElement('div');
+                const link = g.link || extractLinkFromName(g.name);
+                const hasLink = !!link;
+                const isClaimed = !!g.claimed_by;
+                const isMine = isClaimed && me && String(g.claimed_by) === String(me);
+                
+                let itemStateClass = 'gift-unclaimed';
+                if (isClaimed && isMine) itemStateClass = 'gift-claimed-mine';
+                else if (isClaimed) itemStateClass = 'gift-claimed-other';
+                el.className = `gift-item ${itemStateClass} ${hasLink ? 'link-card' : 'compact'}`;
+                
+                let claimerLabel = '';
+                if (isClaimed && !isMine) {
+                    const full = g.full_name || '';
+                    const shortened = full ? full.split(/\s+/).slice(0, 2).join(' ') : 'Someone';
+                    claimerLabel = `<span class="claimer-badge other" title="${full || 'Claimed by another user'}">${shortened}</span>`;
+                } else if (isClaimed && isMine) {
+                    claimerLabel = `<span class="claimer-badge" title="You claimed this">You</span>`;
+                }
+                
+                if (hasLink) {
+                    const dom = domainFromUrl(link);
+                    const titleText = String(g.name||'').replace(/\s*\((https?:[^)]+)\)\s*$/i,'').trim() || '(Link)';
+                    el.innerHTML = `
+                    <div style="display:flex; gap:12px; align-items:center; width:100%;">
+                      <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">
+                        <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                          <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">
+                        </div>
+                        <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">
+                          <h3 style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${titleText}</h3>
+                          <p class="gift-link" style="margin:0; color:#4b5563; font-size:13px;">${dom} ↗</p>
+                        </div>
+                      </a>
+                      <div class="gift-item-actions" style="margin-left:auto;">
+                        ${claimerLabel}
+                      </div>
+                    </div>`;
+                } else {
+                    el.innerHTML = `
+                      <div class="gift-item-info">
+                        <h3>${g.name}</h3>
+                      </div>
+                      <div class="gift-item-actions" style="margin-left:auto;">
+                        ${claimerLabel}
+                      </div>`;
+                }
+                
+                secretSantaGifts.appendChild(el);
+            });
+        } catch (e) {
+            console.error('Failed to load secret santa gifts', e);
+            secretSantaGifts.innerHTML = '<p class="no-gifts-message">Failed to load gifts.</p>';
+        }
     }
 
     async function renderShoppingList() {
@@ -1076,6 +1207,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedKidGifts.innerHTML = '<p class="no-gifts-message">No children yet. Use "+ Add child" to add one.</p>';
             }
         }
+        if (modal === secretSantaViewerModal) {
+            await populateSecretSantaParticipants();
+            secretSantaGifts.innerHTML = '<p class="no-gifts-message">Select a participant to view their gift ideas.</p>';
+        }
         if (modal === parentsGiftListModal) {
             selectedParentGifts.innerHTML = '';
             // Prefer current selection from main form if available
@@ -1164,12 +1299,12 @@ document.addEventListener('DOMContentLoaded', () => {
             currentModal = null;
         }
         // Clear active state when closing any modal
-        [myGiftListBtn, kidsGiftListBtn, parentsGiftListBtn, shoppingListBtn, recipientGiftsBtn, setRecipientBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
+        [myGiftListBtn, kidsGiftListBtn, parentsGiftListBtn, shoppingListBtn, recipientGiftsBtn, setRecipientBtn, secretSantaViewerBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
     }
 
     // Open modals from sidebar buttons
     const markActive = (btn) => {
-        [myGiftListBtn, kidsGiftListBtn, parentsGiftListBtn, shoppingListBtn, recipientGiftsBtn, setRecipientBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
+        [myGiftListBtn, kidsGiftListBtn, parentsGiftListBtn, shoppingListBtn, recipientGiftsBtn, setRecipientBtn, secretSantaViewerBtn, settingsBtn].forEach(b => b && b.classList.remove('active'));
         btn && btn.classList.add('active');
     };
 
@@ -1177,6 +1312,12 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         markActive(myGiftListBtn);
         await openModal(myGiftListModal);
+    });
+
+    secretSantaViewerBtn?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        markActive(secretSantaViewerBtn);
+        await openModal(secretSantaViewerModal);
     });
 
     kidsGiftListBtn.addEventListener('click', async (e) => {
@@ -1240,6 +1381,24 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch {}
     })();
 
+    // Show Secret Santa Viewer button for parents (and admin for testing)
+    (async function showSecretSantaViewerIfPrivileged(){
+        try {
+            if (!secretSantaViewerBtn) return;
+            const { supabase } = await import('./supabase.js');
+            const { data: userData } = await supabase.auth.getUser();
+            const email = String(userData?.user?.email || '').toLowerCase();
+            const PRIVILEGED_EMAILS = [
+                'tazdev1123@msn.com',
+                'jvillase@msn.com',
+                'antonio.villasenor08@gmail.com'
+            ];
+            if (email && PRIVILEGED_EMAILS.includes(email)) {
+                secretSantaViewerBtn.style.display = '';
+            }
+        } catch {}
+    })();
+
     settingsForm?.addEventListener('submit', (e) => {
         e.preventDefault();
         const s = getSettings();
@@ -1282,6 +1441,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     parentSelector?.addEventListener('change', (e) => {
         loadParentGifts(e.target.value);
+    });
+
+    santaParticipantSelect?.addEventListener('change', (e) => {
+        loadSecretSantaGifts(e.target.value);
     });
 
     window.addEventListener('parent-gifts-updated', (e) => {

@@ -18,14 +18,15 @@
       #myGiftsList, #selectedKidGifts, #selectedParentGifts, #shoppingListContainer { grid-template-columns: 1fr; }
     }
     
-    /* Kids gift list cards: Ensure proper layout with flex */
+    /* Gift list cards: Ensure proper layout with flex */
     #selectedKidGifts .gift-item,
+    #selectedParentGifts .gift-item,
     #shoppingListContainer .gift-item {
       width: 100%;
       box-sizing: border-box;
     }
   </style>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="icon" href="data:,">
 </head>
 <body>
@@ -86,6 +87,13 @@
           <path fill="currentColor" d="M12 1a9 9 0 0 1 9 9c0 3.5-2 6.53-4.92 8l.58 3.5L12 19l-4.66 2.5.58-3.5A9.98 9.98 0 0 1 3 10a9 9 0 0 1 9-9m0 4a3 3 0 1 0 3 3 3 3 0 0 0-3-3m0 12c2.67 0 5.33-1.33 6-2-1-2-4-3-6-3s-5 1-6 3c.67.67 3.33 2 6 2Z"/>
         </svg>
         Set Recipient
+      </button>
+
+      <button id="secretSantaViewerBtn" class="sidebar-button" style="display:none;">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M12,1L8,5H11V14H13V5H16M18,23H6C4.89,23 4,22.1 4,21V9A2,2 0 0,1 6,7H9V9H6V21H18V9H15V7H18A2,2 0 0,1 20,9V21A2,2 0 0,1 18,23Z" />
+        </svg>
+        Secret Santa Gift Ideas
       </button>
 
       <button id="settingsBtn" class="sidebar-button">
@@ -226,6 +234,26 @@
     </div>
   </div>
 
+  <!-- Secret Santa Viewer Modal (Parents Only) -->
+  <div id="secretSantaViewerModal" class="modal modal--wide">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Secret Santa Gift Ideas</h2>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="helper-text">View gift ideas for any Secret Santa participant.</p>
+        <div class="form-group">
+          <label for="santaParticipantSelect">Select a participant:</label>
+          <select id="santaParticipantSelect">
+            <option value="">Choose someone...</option>
+          </select>
+        </div>
+        <div id="secretSantaGifts" class="gifts-list"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Settings Modal -->
   <div id="settingsModal" class="modal">
     <div class="modal-content">
@@ -277,8 +305,11 @@
         <input type="hidden" id="giftModeHidden" value="idea">
       </div>
       <div id="ideaFields">
-        <label for="adultGiftIdeas">Gift Ideas (one per line):</label>
-  <textarea id="adultGiftIdeas" rows="10" required></textarea>
+        <label for="adultGiftIdeasTag">Gift Ideas:</label>
+        <div class="tag-input-container" id="adultGiftIdeasTag" data-required="true">
+          <input type="text" class="tag-input" placeholder="Type a gift idea and press Enter or comma..." />
+        </div>
+        <div class="tag-input-hint">Press Enter or use commas to add multiple ideas</div>
         <div id="autoDetectNote" class="auto-detect-note hide">Detected a link. Switched to Link mode. You can switch back.</div>
       </div>
       <div id="linkFields" style="display:none;">
@@ -314,8 +345,11 @@
         <input type="hidden" id="kidsModeHidden" value="idea">
       </div>
       <div id="devKidsIdeaFields" class="form-group">
-        <label for="kidsGiftIdeas">Gift Ideas for Selected Child:</label>
-        <textarea id="kidsGiftIdeas" name="giftIdeas" rows="4" placeholder="Enter gift suggestions for this child (one per line)...&#13;&#10;Examples:&#13;&#10;- Dinosaur toys&#13;&#10;- Size 4T winter clothes&#13;&#10;- Educational books&#13;&#10;- Favorite characters: Paw Patrol, PJ Masks" required></textarea>
+        <label for="kidsGiftIdeasTag">Gift Ideas for Selected Child:</label>
+        <div class="tag-input-container" id="kidsGiftIdeasTag" data-required="true">
+          <input type="text" class="tag-input" placeholder="Type a gift idea and press Enter or comma..." />
+        </div>
+        <div class="tag-input-hint">Examples: Dinosaur toys, Size 4T winter clothes, Educational books</div>
       </div>
       <div id="devKidsLinkFields" class="form-group" style="display:none;">
         <label for="devKidLinkUrl">Product link (http/https):</label>
@@ -361,8 +395,11 @@
         <input type="hidden" id="parentsModeHidden" value="idea">
       </div>
       <div id="devParentsIdeaFields" class="form-group">
-        <label for="parentsGiftIdeas">Gift Ideas for Selected Parent:</label>
-        <textarea id="parentsGiftIdeas" name="giftIdeas" rows="4" placeholder="Enter gift suggestions for this parent (one per line)..." required></textarea>
+        <label for="parentsGiftIdeasTag">Gift Ideas for Selected Parent:</label>
+        <div class="tag-input-container" id="parentsGiftIdeasTag" data-required="true">
+          <input type="text" class="tag-input" placeholder="Type a gift idea and press Enter or comma..." />
+        </div>
+        <div class="tag-input-hint">Press Enter or use commas to add multiple ideas</div>
       </div>
       <div id="devParentsLinkFields" class="form-group" style="display:none;">
         <label for="devParentLinkUrl">Product link (http/https):</label>
@@ -398,7 +435,6 @@
   const adultForm = document.getElementById('adultGiftForm');
   const giftModeToggle = document.getElementById('giftModeToggle');
   const giftModeHidden = document.getElementById('giftModeHidden');
-  const ideaTextarea = document.getElementById('adultGiftIdeas');
   const linkFields = document.getElementById('linkFields');
   const ideaFields = document.getElementById('ideaFields');
   const urlInput = document.getElementById('devLinkUrl');
@@ -418,7 +454,6 @@
     const kidsLinkFields = document.getElementById('devKidsLinkFields');
     const kidUrlInput = document.getElementById('devKidLinkUrl');
     const kidCaptionInput = document.getElementById('devKidLinkCaption');
-    const kidsTextarea = document.getElementById('kidsGiftIdeas');
   const parentsForm = document.getElementById('parentsGiftForm');
   const parentSelect = document.getElementById('parentSelect');
   const parentsModeToggle = document.getElementById('parentsModeToggle');
@@ -427,7 +462,90 @@
     const parentsLinkFields = document.getElementById('devParentsLinkFields');
     const parentUrlInput = document.getElementById('devParentLinkUrl');
     const parentCaptionInput = document.getElementById('devParentLinkCaption');
-    const parentsTextarea = document.getElementById('parentsGiftIdeas');
+
+    // === Tag Input Functionality ===
+    function initTagInput(containerEl) {
+      const input = containerEl.querySelector('.tag-input');
+      if (!input) return;
+
+      // Add tag on Enter or comma
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ',') {
+          e.preventDefault();
+          addTag(containerEl, input.value.trim());
+          input.value = '';
+        } else if (e.key === 'Backspace' && input.value === '') {
+          // Remove last tag if input is empty and backspace is pressed
+          const tags = containerEl.querySelectorAll('.tag-item');
+          if (tags.length > 0) {
+            tags[tags.length - 1].remove();
+          }
+        }
+      });
+
+      // Handle paste with commas
+      input.addEventListener('paste', (e) => {
+        setTimeout(() => {
+          const value = input.value;
+          if (value.includes(',')) {
+            const items = value.split(',').map(s => s.trim()).filter(Boolean);
+            items.forEach(item => addTag(containerEl, item));
+            input.value = '';
+          }
+        }, 0);
+      });
+
+      // Focus input when clicking container
+      containerEl.addEventListener('click', (e) => {
+        if (e.target === containerEl) {
+          input.focus();
+        }
+      });
+    }
+
+    function addTag(containerEl, text) {
+      if (!text) return;
+      
+      const input = containerEl.querySelector('.tag-input');
+      const tag = document.createElement('span');
+      tag.className = 'tag-item';
+      tag.innerHTML = `
+        <span class="tag-item-text">${escapeHtml(text)}</span>
+        <button type="button" class="tag-item-remove" aria-label="Remove tag">&times;</button>
+      `;
+      
+      const removeBtn = tag.querySelector('.tag-item-remove');
+      removeBtn.addEventListener('click', () => tag.remove());
+      
+      containerEl.insertBefore(tag, input);
+      containerEl.classList.remove('error');
+    }
+
+    function getTags(containerEl) {
+      return Array.from(containerEl.querySelectorAll('.tag-item-text')).map(el => el.textContent);
+    }
+
+    function clearTags(containerEl) {
+      containerEl.querySelectorAll('.tag-item').forEach(tag => tag.remove());
+      const input = containerEl.querySelector('.tag-input');
+      if (input) input.value = '';
+      containerEl.classList.remove('error');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initialize all tag inputs
+    const adultTagContainer = document.getElementById('adultGiftIdeasTag');
+    const kidsTagContainer = document.getElementById('kidsGiftIdeasTag');
+    const parentsTagContainer = document.getElementById('parentsGiftIdeasTag');
+
+    if (adultTagContainer) initTagInput(adultTagContainer);
+    if (kidsTagContainer) initTagInput(kidsTagContainer);
+    if (parentsTagContainer) initTagInput(parentsTagContainer);
 
     function setGiftMode(mode, {auto=false}={}) {
       giftModeHidden.value = mode;
@@ -435,33 +553,14 @@
       giftModeToggle.querySelectorAll('.segment').forEach(btn=>{
         btn.setAttribute('aria-checked', btn.dataset.mode===mode ? 'true':'false');
       });
-      if (mode==='idea') { ideaFields.style.display=''; linkFields.style.display='none'; urlInput.required=false; ideaTextarea.required=true; }
-      else { ideaFields.style.display='none'; linkFields.style.display=''; urlInput.required=true; ideaTextarea.required=false; }
+      if (mode==='idea') { ideaFields.style.display=''; linkFields.style.display='none'; urlInput.required=false; }
+      else { ideaFields.style.display='none'; linkFields.style.display=''; urlInput.required=true; }
       if (auto) { autoDetectNote?.classList.remove('hide'); setTimeout(()=>autoDetectNote?.classList.add('hide'), 3200); }
       else { autoDetectNote?.classList.add('hide'); }
     }
     giftModeToggle?.addEventListener('click', e=>{ const btn=e.target.closest('.segment'); if(!btn) return; setGiftMode(btn.dataset.mode); });
     giftModeToggle?.addEventListener('keydown', e=>{ if(!['ArrowLeft','ArrowRight'].includes(e.key)) return; e.preventDefault(); const next = giftModeHidden.value==='idea'?'link':'idea'; setGiftMode(next); giftModeToggle.querySelector(`.segment[data-mode="${next}"]`)?.focus(); });
     setGiftMode('idea');
-
-    // Auto-detect URL in idea textarea (single line or line with caption + url)
-    const endUrlRegex = /(https?:\/\/[^\s]+)$/i;
-    ideaTextarea?.addEventListener('input', () => {
-      const val = ideaTextarea.value.trim();
-      if (!val) { ideaTextarea.classList.remove('url-invalid'); return; }
-      if (!val.includes('\n')) { // single line
-        const m = val.match(endUrlRegex);
-        if (m) {
-          const url = m[1];
-          const caption = val.slice(0, val.lastIndexOf(url)).trim();
-            // switch to link mode
-          setGiftMode('link', {auto:true});
-          urlInput.value = url;
-          captionInput.value = caption;
-          ideaTextarea.value='';
-        }
-      }
-    });
 
     function normalizeUrl(inputUrl) { try { const u = new URL(inputUrl); if (!/^https?:$/.test(u.protocol)) return null; const strip=[/^utm_/i,/^fbclid$/i,/^gclid$/i,/^igshid$/i,/^mc_eid$/i,/^mc_cid$/i,/^ref$/i]; [...u.searchParams.keys()].forEach(k=>{ if(strip.some(r=>r.test(k))) u.searchParams.delete(k);}); const host=u.hostname.replace(/^www\./,''); if(host.includes('amazon.')){ const m=u.pathname.match(/(?:dp|gp\/product)\/([A-Z0-9]{10})/i)||u.pathname.match(/\/([A-Z0-9]{10})(?:[/?]|$)/i); if(m&&m[1]){ u.pathname=`/dp/${m[1].toUpperCase()}`; u.search=''; } u.searchParams.delete('tag'); } u.protocol='https:'; return u.toString(); } catch{ return null; } }
 
@@ -553,14 +652,17 @@
           return;
         }
 
-        // Idea mode (existing behavior)
-        const raw = kidsTextarea.value;
-        const lines = (raw || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-        if (!lines.length) { showToast('Nothing to add', 'error'); return; }
+        // Idea mode
+        const tags = getTags(kidsTagContainer);
+        if (tags.length === 0) { 
+          kidsTagContainer.classList.add('error');
+          showToast('Add at least one gift idea', 'error'); 
+          return; 
+        }
         let successCount = 0;
-        for (const line of lines) {
+        for (const tag of tags) {
           try {
-            await addKidGift(kidId, { name: line });
+            await addKidGift(kidId, { name: tag });
             successCount++;
           } catch (err) {
             const msg = String(err?.message || '').toLowerCase();
@@ -568,7 +670,7 @@
             throw err;
           }
         }
-        kidsTextarea.value = '';
+        clearTags(kidsTagContainer);
         window.dispatchEvent(new CustomEvent('kid-gifts-updated', { detail: { kidId } }));
         showToast(successCount > 0 ? 'Suggestions added' : 'No new suggestions (duplicates ignored)');
       } catch (e2) {
@@ -632,13 +734,16 @@
         }
 
         // Idea mode
-        const raw = parentsTextarea.value;
-        const lines = (raw || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-        if (!lines.length) { showToast('Nothing to add', 'error'); return; }
+        const tags = getTags(parentsTagContainer);
+        if (tags.length === 0) { 
+          parentsTagContainer.classList.add('error');
+          showToast('Add at least one gift idea', 'error'); 
+          return; 
+        }
         let successCount = 0;
-        for (const line of lines) {
+        for (const tag of tags) {
           try {
-            await addParentGift(parentName, { name: line });
+            await addParentGift(parentName, { name: tag });
             successCount++;
           } catch (err) {
             const msg = String(err?.message || '').toLowerCase();
@@ -646,7 +751,7 @@
             throw err;
           }
         }
-        parentsTextarea.value = '';
+        clearTags(parentsTagContainer);
         window.dispatchEvent(new CustomEvent('parent-gifts-updated', { detail: { parentName } }));
         showToast(successCount > 0 ? 'Suggestions added' : 'No new suggestions (duplicates ignored)');
       } catch (e2) {
@@ -661,19 +766,21 @@
       const mode = giftModeHidden.value;
       const user = await getCurrentUser().catch(()=>null);
       if (mode === 'idea') {
-        const raw = ideaTextarea.value.trim();
-        if (!raw) { showToast('Add at least one idea', 'error'); return; }
-        const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
-        if (!lines.length) { showToast('Nothing to add', 'error'); return; }
+        const tags = getTags(adultTagContainer);
+        if (tags.length === 0) { 
+          adultTagContainer.classList.add('error');
+          showToast('Add at least one gift idea', 'error'); 
+          return; 
+        }
         if (user && user.id) {
-          for (const line of lines) { try { await addGiftToList({ name: line }); } catch(e2){ console.error(e2); } }
+          for (const tag of tags) { try { await addGiftToList({ name: tag }); } catch(e2){ console.error(e2); } }
         } else {
           const existing = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]');
-          lines.forEach(l=> existing.push(l));
+          tags.forEach(t=> existing.push(t));
           localStorage.setItem('my_gift_ideas', JSON.stringify(existing));
         }
-        showToast(`Added ${lines.length} idea${lines.length!==1?'s':''}`);
-        ideaTextarea.value='';
+        showToast(`Added ${tags.length} idea${tags.length!==1?'s':''}`);
+        clearTags(adultTagContainer);
       } else { // link mode
         const rawUrl = (urlInput.value||'').trim();
         if (!rawUrl) { showToast('Enter a product link', 'error'); return; }
