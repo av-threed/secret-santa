@@ -1,7 +1,10 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/+esm'
 
-const SUPABASE_URL = 'https://icdxxlirmwhbehqqrhot.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljZHh4bGlybXdoYmVocXFyaG90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0Mzk5NTEsImV4cCI6MjA3MjAxNTk1MX0.VN6nr8wFdUe16nB5f7nzwC7iOcbwgBIcnsM7nLFRWhY'
+export const SUPABASE_URL = 'https://icdxxlirmwhbehqqrhot.supabase.co'
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljZHh4bGlybXdoYmVocXFyaG90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0Mzk5NTEsImV4cCI6MjA3MjAxNTk1MX0.VN6nr8wFdUe16nB5f7nzwC7iOcbwgBIcnsM7nLFRWhY'
+
+export const ADMIN_EMAIL = 'antonio.villasenor08@gmail.com';
+const ADMIN_EMAIL_LOWER = ADMIN_EMAIL.toLowerCase();
 
 // Initialize Supabase client
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)

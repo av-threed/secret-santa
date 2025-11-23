@@ -1,8 +1,8 @@
 // Admin Portal logic
-import { supabase, inviteUser, getKids } from './supabase.js';
+import { supabase, inviteUser, getKids, ADMIN_EMAIL, SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase.js';
 import { confirmDialog, showToast, inputDialog, editGiftDialog } from './ui.js';
 
-export const ADMIN_EMAIL = 'antonio.villasenor08@gmail.com';
+const ADMIN_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/admin`;
 
 async function requireAdmin() {
   const { data: userData } = await supabase.auth.getUser();
@@ -14,12 +14,57 @@ async function requireAdmin() {
 }
 
 async function adminInvoke(action, payload = {}) {
-  const { data, error } = await supabase.functions.invoke('admin', {
-    body: { action, ...payload }
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
-  return data;
+  const body = { action, ...payload };
+
+  async function invokeViaClient() {
+    const { data, error } = await supabase.functions.invoke('admin', { body });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
+  async function invokeViaFetch() {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    const token = sessionData?.session?.access_token;
+    if (!token) throw new Error('Missing auth session. Please sign in again.');
+    const response = await fetch(ADMIN_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${token}`,
+        'Cache-Control': 'no-store'
+      },
+      body: JSON.stringify(body)
+    });
+    const text = await response.text();
+    let json = {};
+    if (text) {
+      try { json = JSON.parse(text); } catch { json = { error: text }; }
+    }
+    if (!response.ok || json?.error) {
+      const msg = json?.error || `Edge function error (${response.status})`;
+      throw new Error(msg);
+    }
+    return json;
+  }
+
+  const shouldRetry = (err) => {
+    if (!err) return false;
+    const message = String(err.message || '').toLowerCase();
+    return message.includes('failed to send a request to the edge function') ||
+           message.includes('fetch failed') ||
+           message.includes('networkerror');
+  };
+
+  try {
+    return await invokeViaClient();
+  } catch (err) {
+    if (!shouldRetry(err)) throw err;
+    console.warn('Supabase.functions invoke failed; retrying via fetch', err);
+    return await invokeViaFetch();
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
