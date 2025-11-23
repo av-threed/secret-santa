@@ -1,6 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const ADMIN_EMAIL = 'antonio.villasenor08@gmail.com';
+const VIEWER_EMAILS = [
+  'antonio.villasenor08@gmail.com',
+  'tazdev1123@msn.com',
+  'jvillase@msn.com'
+];
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -31,7 +36,10 @@ Deno.serve(async (req) => {
   const user = authData?.user || null;
   if (!user) return json({ error: 'Unauthorized' }, 401);
   const email = String(user.email || '').toLowerCase();
-  if (email !== ADMIN_EMAIL.toLowerCase()) return json({ error: 'Forbidden' }, 403);
+  const adminEmail = ADMIN_EMAIL.toLowerCase();
+  const viewerEmails = new Set(VIEWER_EMAILS.map(e => e.toLowerCase()));
+  const isAdmin = email === adminEmail;
+  const isViewer = viewerEmails.has(email);
 
   const admin = createClient(supabaseUrl, serviceKey);
 
@@ -39,6 +47,10 @@ Deno.serve(async (req) => {
   const action = body?.action;
 
   try {
+    if (!isAdmin && action !== 'list_user_gifts') {
+      return json({ error: 'Forbidden' }, 403);
+    }
+
     switch (action) {
       case 'list_profiles': {
         const usersRes = await admin.auth.admin.listUsers();
@@ -169,6 +181,18 @@ Deno.serve(async (req) => {
         const { error } = await admin.from('assignments').delete().eq('buyer_user_id', buyer_user_id).eq('year', year);
         if (error) throw error;
         return json({ data: { buyer_user_id, year } });
+      }
+      case 'list_user_gifts': {
+        if (!isViewer) return json({ error: 'Forbidden' }, 403);
+        const targetId = body?.user_id;
+        if (!targetId) return json({ error: 'user_id required' }, 400);
+        const { data, error } = await admin
+          .from('gifts')
+          .select('id, name, link, notes, price, created_at')
+          .eq('user_id', targetId)
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        return json({ data });
       }
       default:
         return json({ error: 'Unknown action' }, 400);

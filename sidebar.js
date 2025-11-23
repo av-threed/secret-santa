@@ -1,5 +1,5 @@
 // Import Supabase functions
-import { getMyGifts, deleteGift, addGiftToList, signOut as supaSignOut, getKids, getKidGifts, deleteKidGift, getRecipientForBuyer, getUserGifts, getProfile, listProfilesExcludingSelf, upsertMyRecipient, isAssignmentsLocked, getParentGifts, deleteParentGift, getAllProfiles } from './supabase.js';
+import { supabase, getMyGifts, deleteGift, addGiftToList, signOut as supaSignOut, getKids, getKidGifts, deleteKidGift, getRecipientForBuyer, getUserGifts, getProfile, listProfilesExcludingSelf, upsertMyRecipient, isAssignmentsLocked, getParentGifts, deleteParentGift, getAllProfiles } from './supabase.js';
 import { confirmDialog, showToast, editGiftDialog } from './ui.js';
 
 // Sidebar functionality
@@ -1029,8 +1029,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const profile = await getProfile(userId);
             const userName = profile?.full_name || 'User';
             
-            // Get user's gifts
-            const gifts = await getUserGifts(userId);
+            let gifts = [];
+            try {
+                const { data, error } = await supabase.functions.invoke('admin', { body: { action: 'list_user_gifts', user_id: userId } });
+                if (error) throw error;
+                gifts = data?.data || [];
+            } catch (edgeErr) {
+                console.error('list_user_gifts failed, falling back to direct query', edgeErr);
+                try {
+                    gifts = await getUserGifts(userId);
+                } catch (directErr) {
+                    console.error('Fallback getUserGifts failed', directErr);
+                    throw directErr;
+                }
+            }
             
             // Get current user for claim status
             let me = null;
