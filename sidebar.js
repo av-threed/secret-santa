@@ -97,6 +97,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     }
 
+  function normalizeLocalGift(raw) {
+    const original = String(raw || '').trim();
+    if (!original) return { name: '', link: null };
+    const link = extractLinkFromName(original);
+    if (!link) return { name: original, link: null };
+    let clean = original.replace(/\((https?:[^)\s]+)\)\s*$/i, '').replace(link, '').trim();
+    if (!clean) {
+      try { clean = new URL(link).hostname.replace(/^www\./, ''); }
+      catch { clean = link; }
+    }
+    return { name: clean.trim(), link };
+  }
+
     // Local kids fallback & claims
     function localKeyForKid(kidId) { return `kid_gifts_local:${kidId}`; }
     function localClaimKeyForKid(kidId) { return `kid_gifts_claims:${kidId}`; }
@@ -219,6 +232,42 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {
                 // ignore and fall back to local storage
             }
+
+      let userId = null;
+      try {
+        const { supabase } = await import('./supabase.js');
+        const { data: userData } = await supabase.auth.getUser();
+        userId = userData?.user?.id || null;
+      } catch (e) {
+        console.error('Unable to determine current user for gift sync', e);
+      }
+
+      if (userId && (!gifts || gifts.length === 0)) {
+        let localIdeas = [];
+        try { localIdeas = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]'); } catch {}
+        if (localIdeas.length) {
+          let synced = 0;
+          for (const idea of localIdeas) {
+            const { name, link } = normalizeLocalGift(idea);
+            if (!name) continue;
+            try {
+              await addGiftToList(link ? { name, link } : { name });
+              synced++;
+            } catch (err) {
+              console.error('Failed to sync local gift idea', idea, err);
+            }
+          }
+          localStorage.removeItem('my_gift_ideas');
+          if (synced) {
+            try {
+              gifts = await getMyGifts();
+              showToast(`Synced ${synced} saved gift${synced === 1 ? '' : 's'}`);
+            } catch (err) {
+              console.error('Failed to reload gifts after syncing local ideas', err);
+            }
+          }
+        }
+      }
 
             // If no gifts from DB, try localStorage fallback
             if (!gifts || gifts.length === 0) {

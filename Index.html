@@ -626,6 +626,11 @@
       e.preventDefault();
       const kidId = childSelect.value;
       if (!kidId) { showToast('Select a child', 'error'); return; }
+      const kidUser = await getCurrentUser().catch(()=>null);
+      if (!kidUser || !kidUser.id) {
+        showToast('Please sign in to add kid suggestions.', 'error');
+        return;
+      }
 
       const mode = getSelectedKidsMode();
 
@@ -705,6 +710,11 @@
       e.preventDefault();
       const parentName = parentSelect.value;
       if (!parentName) { showToast('Select a parent', 'error'); return; }
+      const parentUser = await getCurrentUser().catch(()=>null);
+      if (!parentUser || !parentUser.id) {
+        showToast('Please sign in to add parent gift ideas.', 'error');
+        return;
+      }
 
       const mode = getSelectedParentsMode();
 
@@ -761,6 +771,10 @@
       e.preventDefault();
       const mode = giftModeHidden.value;
       const user = await getCurrentUser().catch(()=>null);
+      if (!user || !user.id) {
+        showToast('Please sign in to add your gift ideas.', 'error');
+        return;
+      }
       if (mode === 'idea') {
         const tags = getTags(adultTagContainer);
         if (tags.length === 0) { 
@@ -768,13 +782,7 @@
           showToast('Add at least one gift idea', 'error'); 
           return; 
         }
-        if (user && user.id) {
-          for (const tag of tags) { try { await addGiftToList({ name: tag }); } catch(e2){ console.error(e2); } }
-        } else {
-          const existing = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]');
-          tags.forEach(t=> existing.push(t));
-          localStorage.setItem('my_gift_ideas', JSON.stringify(existing));
-        }
+        for (const tag of tags) { try { await addGiftToList({ name: tag }); } catch(e2){ console.error(e2); } }
         showToast(`Added ${tags.length} idea${tags.length!==1?'s':''}`);
         clearTags(adultTagContainer);
         window.dispatchEvent(new CustomEvent('my-gifts-updated'));
@@ -787,12 +795,7 @@
         const caption = (captionInput.value||'').trim();
         const name = caption || new URL(normalized).hostname.replace(/^www\./,'');
         try {
-          if (user && user.id) { await addGiftToList({ name, link: normalized }); }
-          else {
-            const existing = JSON.parse(localStorage.getItem('my_gift_ideas') || '[]');
-            existing.push(caption ? `${caption} (${normalized})` : normalized);
-            localStorage.setItem('my_gift_ideas', JSON.stringify(existing));
-          }
+          await addGiftToList({ name, link: normalized });
           showToast('Link added');
           urlInput.value=''; captionInput.value='';
           window.dispatchEvent(new CustomEvent('my-gifts-updated'));
