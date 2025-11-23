@@ -315,8 +315,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   setAssignmentBtn?.addEventListener('click', async () => {
     const buyer = buyerSelect.value; const recipient = recipientSelect.value; const year = parseInt(currentYearInput.value||'') || new Date().getFullYear();
     if (!buyer || !recipient) { showToast('Select buyer and recipient', 'error'); return; }
-    try { await adminInvoke('upsert_assignment', { buyer_user_id: buyer, recipient_user_id: recipient, year }); await loadAssignments(); showToast('Assignment saved'); }
-    catch(e){ console.error(e); showToast('Failed to save assignment', 'error'); }
+    try {
+      await adminInvoke('upsert_assignment', { buyer_user_id: buyer, recipient_user_id: recipient, year });
+      await loadAssignments();
+      showToast('Assignment saved');
+    } catch(e){
+      console.error(e);
+      const msg = e?.message || 'Failed to save assignment';
+      showToast(msg, 'error');
+    }
   });
 
   // Initial loads

@@ -136,8 +136,19 @@ Deno.serve(async (req) => {
       case 'upsert_assignment': {
         const buyer_user_id = body?.buyer_user_id; const recipient_user_id = body?.recipient_user_id; const year = parseInt(body?.year) || new Date().getFullYear();
         if (!buyer_user_id || !recipient_user_id) return json({ error: 'buyer_user_id and recipient_user_id required' }, 400);
+        // Ensure each recipient is assigned to only one buyer per year.
+        await admin
+          .from('assignments')
+          .delete()
+          .eq('year', year)
+          .eq('recipient_user_id', recipient_user_id)
+          .neq('buyer_user_id', buyer_user_id);
         const payload = [{ year, buyer_user_id, recipient_user_id }];
-        const { data, error } = await admin.from('assignments').upsert(payload, { onConflict: 'year,buyer_user_id' }).select('buyer_user_id, recipient_user_id, year').single();
+        const { data, error } = await admin
+          .from('assignments')
+          .upsert(payload, { onConflict: 'year,buyer_user_id' })
+          .select('buyer_user_id, recipient_user_id, year')
+          .single();
         if (error) throw error;
         return json({ data });
       }
