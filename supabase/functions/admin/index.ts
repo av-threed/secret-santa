@@ -1,12 +1,22 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const ADMIN_EMAIL = 'antonio.villasenor08@gmail.com';
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders }
+  });
 }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
   if (req.method !== 'POST') return json({ error: 'Method Not Allowed' }, 405);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
