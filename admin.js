@@ -55,6 +55,7 @@ async function adminInvoke(action, payload = {}) {
     const message = String(err.message || '').toLowerCase();
     return message.includes('failed to send a request to the edge function') ||
            message.includes('fetch failed') ||
+           message.includes('failed to fetch') ||
            message.includes('networkerror');
   };
 
