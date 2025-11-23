@@ -558,6 +558,100 @@ a.btn-delete {
   gap: 10px;
 }
 
+.kid-gifts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.kid-gift-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 140px;
+}
+
+.kid-gift-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kid-gift-card__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.kid-gift-card__notes {
+  margin: 0;
+  color: var(--color-muted-text, rgba(255,255,255,0.8));
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.kid-gift-card__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-primary);
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.kid-gift-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kid-gift-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kid-gift-card__claim {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.kid-gift-card__claim select {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 640px) {
+  .kid-gifts-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .kid-gift-card {
+    padding: 12px;
+  }
+  .kid-gift-card__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .kid-gift-card__actions button {
+    width: 100%;
+  }
+  .kid-gift-card__claim {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .kid-gift-card__claim select,
+  .kid-gift-card__claim button {
+    width: 100%;
+  }
+}
+
 .gift-item {
   background-color: var(--color-bg);
   border: 1px solid var(--color-border);

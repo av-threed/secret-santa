@@ -264,50 +264,37 @@ document.addEventListener('DOMContentLoaded', async () => {
       const hasLink = !!link;
       const dom = hasLink ? (()=>{ try{ return new URL(link).hostname.replace(/^www\./,''); } catch { return ''; } })() : '';
       const titleText = String(g.name||'').replace(/\s*\((https?:[^)]+)\)\s*$/i,'').trim() || (hasLink ? '(Link)' : '');
-      const el = document.createElement('div');
-      el.className = `gift-item ${hasLink ? 'link-card' : 'compact'}`;
-      el.innerHTML = hasLink ? `
-        <div style="display:flex; gap:12px; align-items:center; width:100%">
-          <a href="${link}" target="_blank" rel="noopener noreferrer" style="display:flex; gap:12px; align-items:center; text-decoration:none; color:inherit; flex:1 1 auto; min-width:0;">
-            <div style="flex:0 0 56px; height:56px; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-              <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" alt="${dom}" width="24" height="24" loading="lazy">
-            </div>
-            <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">
-              <h3 style="margin:0 0 4px 0; overflow-wrap:anywhere; word-break:break-word;">${titleText}<\/h3>
-              <p class="gift-link" style="margin:0; color:#4b5563; font-size:13px;">${dom} ↗<\/p>
-              ${g.notes ? `<p class="gift-notes" style="margin-top:4px;">${g.notes}<\/p>` : ''}
-            <\/div>
-          <\/a>
-          <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">
-            ${g.claimed_by_full_name ? `<span class="claimer-badge other" title="${g.claimed_by_full_name}">${(g.claimed_by_full_name||'').split(/\s+/).slice(0,2).join(' ')}<\/span>` : ''}
-            <button class="btn-secondary" data-action="edit" data-id="${g.id}" data-kid="${g.kid_id}">Edit<\/button>
-            <button class="btn-secondary" data-action="clear" data-id="${g.id}">Clear Claim<\/button>
-            <button class="btn-delete" data-action="delete" data-id="${g.id}">Delete<\/button>
+      const claimerBadge = g.claimed_by_full_name ? `<span class="claimer-badge other" title="${g.claimed_by_full_name}">${(g.claimed_by_full_name||'').split(/\s+/).slice(0,2).join(' ')}<\/span>` : '';
+      const card = document.createElement('article');
+      card.className = 'kid-gift-card';
+      card.innerHTML = `
+        <div class="kid-gift-card__header">
+          <div class="kid-gift-card__meta">
+            <span class="kid-gift-card__title">${titleText}<\/span>
+            ${claimerBadge}
           <\/div>
-        <\/div>` : `
-        <div style="display:flex; gap:12px; align-items:center; width:100%">
-          <div class="gift-item-info" style="flex:1 1 auto; min-width:0;">
-            <h3 style="overflow-wrap:anywhere; word-break:break-word; margin:0 0 4px 0;">${g.name}<\/h3>
-            ${g.notes ? `<p class="gift-notes" style="margin:0;">${g.notes}<\/p>` : ''}
-          <\/div>
-          <div class="gift-item-actions" style="margin-left:auto; display:flex; gap:8px; align-items:center;">
-            ${g.claimed_by_full_name ? `<span class="claimer-badge other" title="${g.claimed_by_full_name}">${(g.claimed_by_full_name||'').split(/\s+/).slice(0,2).join(' ')}<\/span>` : ''}
-            <button class="btn-secondary" data-action="edit" data-id="${g.id}" data-kid="${g.kid_id}">Edit<\/button>
-            <button class="btn-secondary" data-action="clear" data-id="${g.id}">Clear Claim<\/button>
-            <button class="btn-delete" data-action="delete" data-id="${g.id}">Delete<\/button>
-          <\/div>
+          ${g.notes ? `<p class="kid-gift-card__notes">${g.notes}<\/p>` : ''}
+          ${hasLink ? `<a class="kid-gift-card__link" href="${link}" target="_blank" rel="noopener noreferrer">
+            <img src="https://www.google.com/s2/favicons?domain=${dom}&sz=64" width="16" height="16" alt="${dom}">
+            <span>${dom || 'View gift'} ↗<\/span>
+          <\/a>` : ''}
+        <\/div>
+        <div class="kid-gift-card__actions">
+          <button class="btn-secondary" data-action="edit" data-id="${g.id}" data-kid="${g.kid_id}">Edit<\/button>
+          <button class="btn-secondary" data-action="clear" data-id="${g.id}">Clear Claim<\/button>
+          <button class="btn-delete" data-action="delete" data-id="${g.id}">Delete<\/button>
         <\/div>`;
-      // Claim setter block
       const claimWrap = document.createElement('div');
-      claimWrap.style.marginTop = '8px';
-      claimWrap.innerHTML = `<div style="display:flex; gap:8px; align-items:center;">
-        <select data-action="set-claim" data-id="${g.id}"><option value="">Set claim to...</option></select>
-        <button class="btn-secondary" data-action="apply-claim" data-id="${g.id}">Apply<\/button>
-      <\/div>`;
-      el.appendChild(claimWrap);
+      claimWrap.className = 'kid-gift-card__claim';
+      claimWrap.innerHTML = `
+        <select data-action="set-claim" data-id="${g.id}">
+          <option value="">Set claim to...</option>
+        <\/select>
+        <button class="btn-secondary" data-action="apply-claim" data-id="${g.id}">Apply<\/button>`;
+      card.appendChild(claimWrap);
       const select = claimWrap.querySelector('select');
       (cachedProfiles||[]).forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=p.full_name||p.email||p.id; select.appendChild(o); });
-      kidGiftsList.appendChild(el);
+      kidGiftsList.appendChild(card);
     });
   }
 
