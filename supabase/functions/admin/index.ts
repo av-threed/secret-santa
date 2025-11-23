@@ -152,6 +152,14 @@ Deno.serve(async (req) => {
         if (error) throw error;
         return json({ data });
       }
+      case 'delete_assignment': {
+        const buyer_user_id = body?.buyer_user_id;
+        const year = parseInt(body?.year) || new Date().getFullYear();
+        if (!buyer_user_id) return json({ error: 'buyer_user_id required' }, 400);
+        const { error } = await admin.from('assignments').delete().eq('buyer_user_id', buyer_user_id).eq('year', year);
+        if (error) throw error;
+        return json({ data: { buyer_user_id, year } });
+      }
       default:
         return json({ error: 'Unknown action' }, 400);
     }

@@ -90,10 +90,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   const buyerSelect = document.getElementById('adminBuyerSelect');
   const recipientSelect = document.getElementById('adminRecipientSelect');
   const setAssignmentBtn = document.getElementById('adminSetAssignmentBtn');
+  const clearAssignmentBtn = document.getElementById('adminClearAssignmentBtn');
   const assignmentsTBody = document.querySelector('#adminAssignmentsTable tbody');
 
   let cachedProfiles = [];
   let cachedKids = [];
+  const updateClearAssignmentState = () => {
+    if (!clearAssignmentBtn) return;
+    const hasBuyer = !!(buyerSelect && buyerSelect.value);
+    clearAssignmentBtn.disabled = !hasBuyer;
+    if (hasBuyer) {
+      clearAssignmentBtn.removeAttribute('aria-disabled');
+    } else {
+      clearAssignmentBtn.setAttribute('aria-disabled', 'true');
+    }
+  };
 
   // Users
   async function loadUsers() {
@@ -133,6 +144,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       rows.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.full_name || p.email || p.id; select.appendChild(o); });
     }
     fillPeople(buyerSelect); fillPeople(recipientSelect);
+    if (buyerSelect) buyerSelect.value = '';
+    if (recipientSelect) recipientSelect.value = '';
+    updateClearAssignmentState();
   }
 
   inviteBtn?.addEventListener('click', async () => {
@@ -357,6 +371,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  buyerSelect?.addEventListener('change', () => {
+    updateClearAssignmentState();
+  });
+
   setAssignmentBtn?.addEventListener('click', async () => {
     const buyer = buyerSelect.value; const recipient = recipientSelect.value; const year = parseInt(currentYearInput.value||'') || new Date().getFullYear();
     if (!buyer || !recipient) { showToast('Select buyer and recipient', 'error'); return; }
@@ -367,6 +385,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch(e){
       console.error(e);
       const msg = e?.message || 'Failed to save assignment';
+      showToast(msg, 'error');
+    }
+  });
+
+  clearAssignmentBtn?.addEventListener('click', async () => {
+    const buyer = buyerSelect?.value || '';
+    if (!buyer) { showToast('Select a buyer', 'error'); return; }
+    const ok = await confirmDialog({ title: 'Clear Assignment', message: 'Remove this buyer\'s recipient for the current year?', confirmText: 'Clear' });
+    if (!ok) return;
+    const year = parseInt(currentYearInput.value||'') || new Date().getFullYear();
+    try {
+      await adminInvoke('delete_assignment', { buyer_user_id: buyer, year });
+      await loadAssignments();
+      showToast('Assignment cleared');
+    } catch(e){
+      console.error(e);
+      const msg = e?.message || 'Failed to clear assignment';
       showToast(msg, 'error');
     }
   });

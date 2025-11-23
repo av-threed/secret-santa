@@ -179,8 +179,12 @@
               <label for="adminRecipientSelect">Recipient</label>
               <select id="adminRecipientSelect"><option value="">Select recipient...</option></select>
             </div>
-            <button id="adminSetAssignmentBtn" class="btn-primary">Set Assignment</button>
+            <div style="display:flex; gap:8px;">
+              <button id="adminSetAssignmentBtn" class="btn-primary">Set Assignment</button>
+              <button id="adminClearAssignmentBtn" class="btn-secondary" disabled>Clear Assignment</button>
+            </div>
           </div>
+          <p class="helper-text" style="margin-top:8px;">Select a buyer to update or clear their recipient for the current year.</p>
           <div style="margin-top:12px; overflow:auto;">
             <table class="table" id="adminAssignmentsTable" style="min-width:680px;">
               <thead><tr><th>Buyer</th><th>Recipient</th><th>Year</th></tr></thead>
